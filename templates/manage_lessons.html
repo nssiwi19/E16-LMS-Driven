@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Course: {{ course.title }}</h1>
-<p><a href="{{ url_for('teacher.manage_courses') }}">← Quay lại danh sách khóa học</a></p>
+<div class="page-head">
+  <div>
+    <h1>{{ course.title }}</h1>
+    <p>Quản lý bài học và sequence order cho khóa học.</p>
+  </div>
+  <a class="link-btn" href="{{ url_for('teacher.manage_courses') }}">← Quay lại danh sách khóa học</a>
+</div>
 
 <section class="card">
   <h2>Thêm bài học</h2>
@@ -23,11 +28,11 @@
       <div class="lesson-item">
         <input type="hidden" name="lesson_ids" value="{{ lesson.id }}" />
         <div>
-          <strong>#{{ lesson.sequence_order }} - {{ lesson.title }}</strong><br />
-          <small>{{ lesson.video_url }}</small>
+          <div class="row-title">#{{ lesson.sequence_order }} - {{ lesson.title }}</div>
+          <div class="row-meta">{{ lesson.video_url or "Chưa có video URL" }}</div>
         </div>
         <div class="actions">
-          <button formaction="{{ url_for('teacher.delete_lesson', course_id=course.id, lesson_id=lesson.id) }}" formmethod="post" onclick="return confirm('Xóa lesson này?')">Xóa</button>
+          <button class="button-danger" formaction="{{ url_for('teacher.delete_lesson', course_id=course.id, lesson_id=lesson.id) }}" formmethod="post" onclick="return confirm('Xóa lesson này?')">Xóa</button>
         </div>
       </div>
     {% endfor %}

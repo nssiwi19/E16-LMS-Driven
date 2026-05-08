@@ -1,14 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Student Dashboard</h1>
+<div class="page-head">
+  <div>
+    <h1>Student Dashboard</h1>
+    <p>Theo dõi tiến độ học tập và vào học ngay từ danh sách bên dưới.</p>
+  </div>
+</div>
 
 <section class="card">
-  <h2>Danh sách khóa học</h2>
+  <h2>Khóa học khả dụng</h2>
   {% for course in available_courses %}
     <div class="row">
-      <span>{{ course.title }} ({{ course.total_lessons }} lessons)</span>
+      <div>
+        <div class="row-title">{{ course.title }}</div>
+        <div class="row-meta">{{ course.total_lessons }} bài học</div>
+      </div>
       {% if course.id in enrolled_course_ids %}
-        <span class="pill">Đã tham gia</span>
+        <span class="pill pill-success">Đã tham gia</span>
       {% else %}
         <form method="post" action="{{ url_for('student.enroll', course_id=course.id) }}">
           <button type="submit">Enroll</button>
@@ -19,7 +27,7 @@
 </section>
 
 {% if rows|length == 0 %}
-  <div class="card">
+  <div class="card empty-box">
     <p>Bạn chưa enrolled khóa học nào. Hãy nhờ teacher tạo khóa học demo trước.</p>
   </div>
 {% endif %}
@@ -27,15 +35,17 @@
 {% for row in rows %}
   <article class="card">
     <h2>{{ row.course.title }}</h2>
-    <p>{{ row.course.description }}</p>
+    <p>{{ row.course.description or "Khóa học chưa có mô tả." }}</p>
     <div class="progress-wrap">
       <div class="progress-label">Tiến độ của bạn: {{ "%.1f"|format(row.my_rate) }}% | Trung bình lớp: {{ "%.1f"|format(row.avg_rate) }}%</div>
       <div class="progress-bar">
         <div class="progress-fill" style="width: {{ row.my_rate }}%"></div>
       </div>
     </div>
-    <p>Enrollment status: <strong>{{ row.enrollment.status }}</strong></p>
-    <a class="button" href="{{ url_for('student.learn', course_id=row.course.id) }}">Vào học</a>
+    <div class="actions">
+      <span class="pill">{{ row.enrollment.status }}</span>
+      <a class="button" href="{{ url_for('student.learn', course_id=row.course.id) }}">Vào học</a>
+    </div>
   </article>
 {% endfor %}
 {% endblock %}

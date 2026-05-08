@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Teacher - Course Management</h1>
+<div class="page-head">
+  <div>
+    <h1>Teacher Workspace</h1>
+    <p>Tạo và quản trị khóa học theo hướng data-driven.</p>
+  </div>
+</div>
 
 <section class="card">
   <h2>Tạo khóa học</h2>
@@ -18,14 +23,18 @@
 {% for course in courses %}
   <article class="card">
     <h2>{{ course.title }}</h2>
-    <p>{{ course.description }}</p>
-    <p><strong>Total lessons:</strong> {{ course.total_lessons }}</p>
+    <p>{{ course.description or "Khóa học chưa có mô tả." }}</p>
+    <p class="muted">Tổng số bài học: {{ course.total_lessons }}</p>
     <div class="actions">
       <a class="button" href="{{ url_for('teacher.manage_lessons', course_id=course.id) }}">Quản lý Lesson</a>
       <form method="post" action="{{ url_for('teacher.delete_course', course_id=course.id) }}" onsubmit="return confirm('Xóa khóa học này?')">
-        <button type="submit">Xóa Course</button>
+        <button type="submit" class="button-danger">Xóa Course</button>
       </form>
     </div>
   </article>
 {% endfor %}
+
+{% if courses|length == 0 %}
+  <div class="card empty-box">Chưa có khóa học nào. Hãy tạo khóa học đầu tiên ở form bên trên.</div>
+{% endif %}
 {% endblock %}

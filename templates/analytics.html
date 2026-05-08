@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Analytics Dashboard (Admin)</h1>
-<p><a class="button" href="{{ url_for('analytics.export_csv') }}">Export Data to CSV</a></p>
+<div class="page-head">
+  <div>
+    <h1>Analytics Dashboard</h1>
+    <p>Phân tích completion rate và điểm rơi theo từng bài học.</p>
+  </div>
+  <a class="button" href="{{ url_for('analytics.export_csv') }}">Export Data to CSV</a>
+</div>
 
 {% for item in course_stats %}
   <section class="card">
@@ -16,17 +21,27 @@
           datasets: [{
             label: "Số học viên complete",
             data: {{ item.funnel_values|tojson }},
-            backgroundColor: "rgba(56, 189, 248, 0.5)",
-            borderColor: "rgba(2, 132, 199, 1)",
+            backgroundColor: "rgba(125, 145, 255, 0.52)",
+            borderColor: "rgba(141, 160, 255, 1)",
             borderWidth: 1
           }]
         },
         options: {
-          plugins: { title: { display: true, text: "Drop-off Funnel – Số học viên hoàn thành mỗi bài" } },
-          scales: { y: { beginAtZero: true } }
+          plugins: {
+            title: { display: true, text: "Drop-off Funnel – Số học viên hoàn thành mỗi bài", color: "#e8ecff" },
+            legend: { labels: { color: "#cfd7ff" } }
+          },
+          scales: {
+            x: { ticks: { color: "#c5cfef" }, grid: { color: "rgba(147, 164, 234, 0.12)" } },
+            y: { beginAtZero: true, ticks: { color: "#c5cfef" }, grid: { color: "rgba(147, 164, 234, 0.14)" } }
+          }
         }
       });
     </script>
   </section>
 {% endfor %}
+
+{% if course_stats|length == 0 %}
+  <div class="card empty-box">Chưa có dữ liệu analytics. Hãy seed và cho student học thử để sinh dữ liệu.</div>
+{% endif %}
 {% endblock %}

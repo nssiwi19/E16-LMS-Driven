@@ -4,23 +4,31 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>E16 MCNA LMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
+    <div class="bg-orb orb-a"></div>
+    <div class="bg-orb orb-b"></div>
     <header class="topbar">
       <div class="container topbar-inner">
-        <a href="{{ url_for('auth.home') }}" class="brand">E16 LMS</a>
+        <a href="{{ url_for('auth.home') }}" class="brand">
+          <span class="brand-dot"></span>
+          E16 LMS
+        </a>
         <nav class="nav">
           {% if user %}
-            <span class="pill">{{ user.email }} | {{ user.role }}</span>
-            <a href="{{ url_for('auth.logout') }}">Đăng xuất</a>
+            <span class="pill">{{ user.role|upper }}</span>
+            <span class="user-email">{{ user.email }}</span>
+            <a class="link-btn" href="{{ url_for('auth.logout') }}">Đăng xuất</a>
           {% endif %}
         </nav>
       </div>
     </header>
-
-    <main class="container">
+    <main class="container app-main">
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           <div class="flash-wrap">
