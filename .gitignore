@@ -1,5 +1,6 @@
 __pycache__/
 *.pyc
 instance/*.db
+instance/*.pre_migration_backup
 *.sqlite3
 .env
