@@ -1,6 +1,8 @@
+import os
 from datetime import datetime
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from flask_login import login_user, logout_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from ..extensions import db
@@ -56,24 +58,30 @@ def login():
         user.last_login = datetime.utcnow()
         user.login_count = (user.login_count or 0) + 1
         db.session.commit()
-        session["user_id"] = user.id
+        login_user(user)
         return redirect(url_for("auth.home"))
     return render_template("login.html", user=g.user)
 
 
 @bp.route("/logout")
 def logout():
-    session.clear()
+    logout_user()
     return redirect(url_for("auth.login"))
 
 
 @bp.route("/seed")
 def seed():
+    seed_password = os.getenv("E16_SEED_PASSWORD")
+    if not seed_password:
+        return "E16_SEED_PASSWORD is required. Set it in .env before calling /seed.", 400
     if db.session.query(User).count() > 0:
         return "Seed skipped: database already has data."
-    student = User(email="student@e16.local", password_hash=generate_password_hash("123456"), role="student")
-    teacher = User(email="teacher@e16.local", password_hash=generate_password_hash("123456"), role="teacher")
-    admin = User(email="admin@e16.local", password_hash=generate_password_hash("123456"), role="admin")
+    student_email = os.getenv("E16_SEED_STUDENT_EMAIL", "student@e16.local")
+    teacher_email = os.getenv("E16_SEED_TEACHER_EMAIL", "teacher@e16.local")
+    admin_email = os.getenv("E16_SEED_ADMIN_EMAIL", "admin@e16.local")
+    student = User(email=student_email, password_hash=generate_password_hash(seed_password), role="student")
+    teacher = User(email=teacher_email, password_hash=generate_password_hash(seed_password), role="teacher")
+    admin = User(email=admin_email, password_hash=generate_password_hash(seed_password), role="admin")
     db.session.add_all([student, teacher, admin])
     db.session.commit()
 
@@ -115,4 +123,4 @@ def seed():
 
     db.session.add(Enrollment(user_id=student.id, course_id=course.id, status="in_progress"))
     db.session.commit()
-    return "Seeded demo data. Accounts: student/teacher/admin with password 123456."
+    return "Seeded demo data. Accounts created from E16_SEED_* env variables."

@@ -1,14 +1,11 @@
 from functools import wraps
 
-from flask import flash, g, redirect, session, url_for
-
-from .extensions import db
-from .models import User
+from flask import flash, g, redirect, url_for
+from flask_login import current_user
 
 
 def load_current_user():
-    uid = session.get("user_id")
-    g.user = db.session.get(User, uid) if uid else None
+    g.user = current_user if current_user.is_authenticated else None
 
 
 def login_required(fn):

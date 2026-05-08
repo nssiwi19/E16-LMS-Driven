@@ -1,6 +1,8 @@
 import uuid
 from datetime import datetime
 
+from flask_login import UserMixin
+
 from .extensions import db
 
 
@@ -8,7 +10,7 @@ def new_uuid() -> str:
     return str(uuid.uuid4())
 
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = "users"
     id = db.Column(db.String(36), primary_key=True, default=new_uuid)
     email = db.Column(db.String(255), unique=True, nullable=False)
