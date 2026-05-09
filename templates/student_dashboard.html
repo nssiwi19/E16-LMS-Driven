@@ -1,51 +1,57 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-head">
+<header class="top-header">
   <div>
-    <h1>Student Dashboard</h1>
-    <p>Theo dõi tiến độ học tập và vào học ngay từ danh sách bên dưới.</p>
+    <h1>Chào mừng trở lại!</h1>
+    <p>Tiếp tục hành trình chinh phục kiến thức của bạn.</p>
   </div>
-</div>
+</header>
 
-<section class="card">
-  <h2>Khóa học khả dụng</h2>
-  {% for course in available_courses %}
-    <div class="row">
-      <div>
-        <div class="row-title">{{ course.title }}</div>
-        <div class="row-meta">{{ course.total_lessons }} bài học</div>
+{% if rows %}
+<section style="margin-bottom: 48px;">
+  <h2 style="margin-bottom: 24px;">Khóa học của tôi</h2>
+  <div class="course-grid">
+    {% for row in rows %}
+    <div class="card course-card">
+      <img src="{{ row.course.cover_image_url or 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3' }}" alt="{{ row.course.title }}" class="course-image">
+      <h3 class="course-title">{{ row.course.title }}</h3>
+      <div class="progress-container">
+        <div class="progress-label">
+          <span>Tiến độ</span>
+          <span>{{ row.my_rate|round|int }}%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: {{ row.my_rate }}%;"></div>
+        </div>
       </div>
-      {% if course.id in enrolled_course_ids %}
-        <span class="pill pill-success">Đã tham gia</span>
-      {% else %}
-        <form method="post" action="{{ url_for('student.enroll', course_id=course.id) }}">
-          <button type="submit">Enroll</button>
-        </form>
-      {% endif %}
+      <div class="progress-label" style="margin-top: -8px; margin-bottom: 20px;">
+        <span>Trung bình lớp: {{ row.avg_rate|round|int }}%</span>
+      </div>
+      <a href="{{ url_for('student.learn', course_id=row.course.id) }}" class="btn btn-primary">Học tiếp</a>
     </div>
-  {% endfor %}
-</section>
-
-{% if rows|length == 0 %}
-  <div class="card empty-box">
-    <p>Bạn chưa enrolled khóa học nào. Hãy nhờ teacher tạo khóa học demo trước.</p>
+    {% endfor %}
   </div>
+</section>
 {% endif %}
 
-{% for row in rows %}
-  <article class="card">
-    <h2>{{ row.course.title }}</h2>
-    <p>{{ row.course.description or "Khóa học chưa có mô tả." }}</p>
-    <div class="progress-wrap">
-      <div class="progress-label">Tiến độ của bạn: {{ "%.1f"|format(row.my_rate) }}% | Trung bình lớp: {{ "%.1f"|format(row.avg_rate) }}%</div>
-      <div class="progress-bar">
-        <div class="progress-fill" style="width: {{ row.my_rate }}%"></div>
+<section>
+  <h2 style="margin-bottom: 24px;">Khám phá khóa học mới</h2>
+  <div class="course-grid">
+    {% for course in available_courses %}
+      {% if course.id not in enrolled_course_ids %}
+      <div class="card course-card">
+        <img src="{{ course.cover_image_url or 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3' }}" alt="{{ course.title }}" class="course-image">
+        <h3 class="course-title">{{ course.title }}</h3>
+        <p class="course-desc">{{ course.description[:100] }}...</p>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="pill">{{ course.total_lessons }} bài học</span>
+          <form action="{{ url_for('student.enroll', course_id=course.id) }}" method="post">
+            <button type="submit" class="btn btn-primary btn-sm">Đăng ký ngay</button>
+          </form>
+        </div>
       </div>
-    </div>
-    <div class="actions">
-      <span class="pill">{{ row.enrollment.status }}</span>
-      <a class="button" href="{{ url_for('student.learn', course_id=row.course.id) }}">Vào học</a>
-    </div>
-  </article>
-{% endfor %}
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
 {% endblock %}

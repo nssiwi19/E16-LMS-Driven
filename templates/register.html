@@ -1,21 +1,34 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card auth">
-  <h1>Đăng ký</h1>
-  <p class="auth-subtitle">Tạo tài khoản mới để truy cập nền tảng E16.</p>
-  <form method="post" class="form-grid">
-    <label>Email</label>
-    <input type="email" name="email" required />
-    <label>Mật khẩu</label>
-    <input type="password" name="password" required />
-    <label>Vai trò</label>
-    <select name="role">
-      <option value="student">student</option>
-      <option value="teacher">teacher</option>
-      <option value="admin">admin</option>
-    </select>
-    <button type="submit">Tạo tài khoản</button>
-  </form>
-  <p>Đã có tài khoản? <a href="{{ url_for('auth.login') }}">Đăng nhập</a></p>
-</section>
+<div class="auth-container">
+  <div class="card auth-card">
+    <div style="text-align: center; margin-bottom: 32px;">
+      <div class="brand-icon" style="margin: 0 auto 16px; width: 40px; height: 40px; border-radius: 10px;"></div>
+      <h1>Tạo tài khoản mới</h1>
+      <p>Bắt đầu hành trình học tập tại E16</p>
+    </div>
+    <form method="post" class="form-group">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" name="email" placeholder="email@example.com" required>
+      </div>
+      <div class="form-group">
+        <label>Mật khẩu</label>
+        <input type="password" name="password" placeholder="••••••••" required>
+      </div>
+      <div class="form-group">
+        <label>Vai trò</label>
+        <select name="role">
+          <option value="student">Học viên</option>
+          <option value="teacher">Giáo viên</option>
+          <option value="admin">Quản trị viên</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 12px;">Đăng ký</button>
+    </form>
+    <div style="text-align: center; margin-top: 24px; font-size: 0.9rem; color: var(--text-muted);">
+      Đã có tài khoản? <a href="{{ url_for('auth.login') }}" style="color: var(--primary);">Đăng nhập</a>
+    </div>
+  </div>
+</div>
 {% endblock %}

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: e16_user
+      POSTGRES_PASSWORD: e16_password
+      POSTGRES_DB: e16_lms
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://e16_user:e16_password@db:5432/e16_lms
+      - SECRET_KEY=your-production-secret-key
+      - E16_SEED_PASSWORD=your-seed-password
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

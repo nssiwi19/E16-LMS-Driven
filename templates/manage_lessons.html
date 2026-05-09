@@ -1,42 +1,64 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-head">
+<header class="top-header">
   <div>
+    <a href="{{ url_for('teacher.manage_courses') }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quản lý khóa học</a>
     <h1>{{ course.title }}</h1>
-    <p>Quản lý bài học và sequence order cho khóa học.</p>
+    <p>Quản lý bài học và thứ tự giảng dạy.</p>
   </div>
-  <a class="link-btn" href="{{ url_for('teacher.manage_courses') }}">← Quay lại danh sách khóa học</a>
+  <div class="actions">
+    <a href="{{ url_for('student.learn', course_id=course.id) }}" class="btn btn-outline" target="_blank">Xem với tư cách Học viên</a>
+  </div>
+</header>
+
+<div class="grid-2">
+  <section>
+    <div class="card">
+      <h2 style="margin-bottom: 20px;">Thêm bài học mới</h2>
+      <form action="{{ url_for('teacher.create_lesson', course_id=course.id) }}" method="post" class="form-group">
+        <div class="form-group">
+          <label>Tên bài học</label>
+          <input type="text" name="title" placeholder="VD: Giới thiệu về Product Metrics" required>
+        </div>
+        <div class="form-group">
+          <label>Video URL (YouTube/Vimeo)</label>
+          <input type="url" name="video_url" placeholder="https://www.youtube.com/embed/...">
+        </div>
+        <div class="form-group">
+          <label>Document URL</label>
+          <input type="url" name="document_url" placeholder="https://example.com/slide.pdf">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Thêm bài học</button>
+      </form>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h2 style="margin-bottom: 20px;">Danh sách bài học ({{ lessons|length }})</h2>
+      {% if lessons %}
+        <form action="{{ url_for('teacher.reorder_lessons', course_id=course.id) }}" method="post" id="reorder-form">
+          <div id="lesson-list">
+            {% for ls in lessons %}
+              <div class="lesson-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--card-border);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <span style="color: var(--text-muted); font-weight: 700;">#{{ ls.sequence_order }}</span>
+                  <span>{{ ls.title }}</span>
+                  <input type="hidden" name="lesson_ids" value="{{ ls.id }}">
+                </div>
+                <div class="actions">
+                  <button type="button" onclick="deleteLesson('{{ ls.id }}')" class="btn btn-danger btn-sm">Xóa</button>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 12px;">Sắp xếp lại bài học bằng cách thay đổi input (Tính năng drag-drop đang phát triển).</p>
+        </form>
+      {% else %}
+        <div class="empty-box">Chưa có bài học nào. Hãy thêm bài học đầu tiên!</div>
+      {% endif %}
+    </div>
+  </section>
 </div>
 
-<section class="card">
-  <h2>Thêm bài học</h2>
-  <form method="post" action="{{ url_for('teacher.create_lesson', course_id=course.id) }}" class="form-grid">
-    <label>Lesson Title</label>
-    <input name="title" required />
-    <label>Video URL</label>
-    <input name="video_url" placeholder="https://www.youtube.com/embed/..." />
-    <label>Document URL</label>
-    <input name="document_url" placeholder="https://..." />
-    <button type="submit">Thêm Lesson</button>
-  </form>
-</section>
-
-<section class="card">
-  <h2>Danh sách bài học (sequence_order)</h2>
-  <form method="post" action="{{ url_for('teacher.reorder_lessons', course_id=course.id) }}">
-    {% for lesson in lessons %}
-      <div class="lesson-item">
-        <input type="hidden" name="lesson_ids" value="{{ lesson.id }}" />
-        <div>
-          <div class="row-title">#{{ lesson.sequence_order }} - {{ lesson.title }}</div>
-          <div class="row-meta">{{ lesson.video_url or "Chưa có video URL" }}</div>
-        </div>
-        <div class="actions">
-          <button class="button-danger" formaction="{{ url_for('teacher.delete_lesson', course_id=course.id, lesson_id=lesson.id) }}" formmethod="post" onclick="return confirm('Xóa lesson này?')">Xóa</button>
-        </div>
-      </div>
-    {% endfor %}
-    <p><small>Muốn đổi thứ tự: chỉnh trực tiếp thứ tự các input hidden trong HTML hoặc mở rộng drag-drop sau.</small></p>
-  </form>
-</section>
 {% endblock %}

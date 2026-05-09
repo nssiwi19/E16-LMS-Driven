@@ -1,40 +1,55 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-head">
+<header class="top-header">
   <div>
-    <h1>Teacher Workspace</h1>
-    <p>Tạo và quản trị khóa học theo hướng data-driven.</p>
+    <h1>Quản lý khóa học</h1>
+    <p>Tạo và quản lý các nội dung giảng dạy của bạn.</p>
   </div>
-</div>
+</header>
 
-<section class="card">
-  <h2>Tạo khóa học</h2>
-  <form method="post" action="{{ url_for('teacher.create_course') }}" class="form-grid">
-    <label>Title</label>
-    <input name="title" required />
-    <label>Description</label>
-    <textarea name="description" rows="3"></textarea>
-    <label>Cover Image URL</label>
-    <input name="cover_image_url" />
-    <button type="submit">Tạo Course</button>
-  </form>
-</section>
-
-{% for course in courses %}
-  <article class="card">
-    <h2>{{ course.title }}</h2>
-    <p>{{ course.description or "Khóa học chưa có mô tả." }}</p>
-    <p class="muted">Tổng số bài học: {{ course.total_lessons }}</p>
-    <div class="actions">
-      <a class="button" href="{{ url_for('teacher.manage_lessons', course_id=course.id) }}">Quản lý Lesson</a>
-      <form method="post" action="{{ url_for('teacher.delete_course', course_id=course.id) }}" onsubmit="return confirm('Xóa khóa học này?')">
-        <button type="submit" class="button-danger">Xóa Course</button>
+<div class="grid-2">
+  <section>
+    <div class="card">
+      <h2 style="margin-bottom: 20px;">Tạo khóa học mới</h2>
+      <form action="{{ url_for('teacher.create_course') }}" method="post" class="form-group">
+        <div class="form-group">
+          <label>Tên khóa học</label>
+          <input type="text" name="title" placeholder="VD: Data-Driven Product Management" required>
+        </div>
+        <div class="form-group">
+          <label>Mô tả ngắn</label>
+          <textarea name="description" rows="3" placeholder="Mô tả mục tiêu khóa học..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Ảnh bìa (URL)</label>
+          <input type="url" name="cover_image_url" placeholder="https://images.unsplash.com/...">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Tạo khóa học</button>
       </form>
     </div>
-  </article>
-{% endfor %}
+  </section>
 
-{% if courses|length == 0 %}
-  <div class="card empty-box">Chưa có khóa học nào. Hãy tạo khóa học đầu tiên ở form bên trên.</div>
-{% endif %}
+  <section>
+    <h2 style="margin-bottom: 24px;">Khóa học của bạn</h2>
+    {% if courses %}
+      {% for course in courses %}
+        <div class="card" style="display: flex; gap: 20px; align-items: center;">
+          <img src="{{ course.cover_image_url or 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3' }}" alt="" style="width: 80px; height: 80px; border-radius: 12px; object-fit: cover;">
+          <div style="flex: 1;">
+            <h3 style="margin-bottom: 4px;">{{ course.title }}</h3>
+            <p style="font-size: 0.85rem; margin-bottom: 12px;">{{ course.total_lessons }} bài học</p>
+            <div class="actions">
+              <a href="{{ url_for('teacher.manage_lessons', course_id=course.id) }}" class="btn btn-outline btn-sm">Quản lý bài học</a>
+              <form action="{{ url_for('teacher.delete_course', course_id=course.id) }}" method="post" style="display: inline;" onsubmit="return confirm('Xóa toàn bộ khóa học và dữ liệu liên quan?')">
+                <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-box">Bạn chưa tạo khóa học nào.</div>
+    {% endif %}
+  </section>
+</div>
 {% endblock %}

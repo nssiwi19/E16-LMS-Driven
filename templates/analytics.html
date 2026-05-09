@@ -1,39 +1,78 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-head">
+<header class="top-header">
   <div>
-    <h1>Analytics Dashboard</h1>
-    <p>Phân tích completion rate và điểm rơi theo từng bài học.</p>
+    <h1>Phân tích dữ liệu học tập</h1>
+    <p>Theo dõi tỷ lệ hoàn thành và hành vi học tập của học viên.</p>
   </div>
-  <a class="button" href="{{ url_for('analytics.export_csv') }}">Export Data to CSV</a>
+  <div class="actions">
+    <a href="{{ url_for('analytics.export_csv') }}" class="btn btn-outline">Xuất dữ liệu CSV</a>
+  </div>
+</header>
+
+<div class="stats-grid">
+  <div class="card stat-card">
+    <div class="stat-value">{{ course_stats|length }}</div>
+    <div class="stat-label">Khóa học</div>
+  </div>
+  <div class="card stat-card">
+    {% set total_rate = course_stats|map(attribute='completion_rate')|sum %}
+    {% set avg_rate = (total_rate / course_stats|length) if course_stats|length > 0 else 0 %}
+    <div class="stat-value">{{ avg_rate|round(1) }}%</div>
+    <div class="stat-label">Tỷ lệ hoàn thành TB</div>
+  </div>
 </div>
 
-{% for item in course_stats %}
-  <section class="card">
-    <h2>{{ item.course.title }}</h2>
-    <div class="metric">Course Completion Rate: {{ "%.2f"|format(item.completion_rate) }}%</div>
-    <canvas id="chart-{{ loop.index }}" height="90"></canvas>
-    <script>
-      new Chart(document.getElementById("chart-{{ loop.index }}"), {
-        type: "bar",
-        data: {
-          labels: {{ item.funnel_labels|tojson }},
-          datasets: [{
-            label: "Số học viên complete",
-            data: {{ item.funnel_values|tojson }},
-            backgroundColor: "rgba(125, 145, 255, 0.52)",
-            borderColor: "rgba(141, 160, 255, 1)",
-            borderWidth: 1
-          }]
+{% for stat in course_stats %}
+<section class="card" style="margin-bottom: 32px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+    <div>
+      <h2 style="margin-bottom: 4px;">{{ stat.course.title }}</h2>
+      <p style="font-size: 0.9rem;">Tỷ lệ hoàn thành khóa học: <strong>{{ stat.completion_rate|round(1) }}%</strong></p>
+    </div>
+  </div>
+
+  <div style="height: 300px; width: 100%;">
+    <canvas id="chart-{{ stat.course.id }}"></canvas>
+  </div>
+
+  <script>
+    new Chart(document.getElementById('chart-{{ stat.course.id }}'), {
+      type: 'bar',
+      data: {
+        labels: {{ stat.funnel_labels|tojson }},
+        datasets: [{
+          label: 'Số lượng học viên hoàn thành',
+          data: {{ stat.funnel_values|tojson }},
+          backgroundColor: 'rgba(99, 102, 241, 0.5)',
+          borderColor: '#6366f1',
+          borderWidth: 2,
+          borderRadius: 8,
+          hoverBackgroundColor: 'rgba(99, 102, 241, 0.8)'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            padding: 12,
+            titleFont: { size: 14, weight: 'bold' },
+            bodyFont: { size: 13 },
+            displayColors: false
+          }
         },
-        options: {
-          plugins: {
-            title: { display: true, text: "Drop-off Funnel – Số học viên hoàn thành mỗi bài", color: "#e8ecff" },
-            legend: { labels: { color: "#cfd7ff" } }
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#94a3b8', stepSize: 1 }
           },
-          scales: {
-            x: { ticks: { color: "#c5cfef" }, grid: { color: "rgba(147, 164, 234, 0.12)" } },
-            y: { beginAtZero: true, ticks: { color: "#c5cfef" }, grid: { color: "rgba(147, 164, 234, 0.14)" } }
+          x: {
+            grid: { display: false },
+            ticks: { color: '#94a3b8' }
           }
         }
       });

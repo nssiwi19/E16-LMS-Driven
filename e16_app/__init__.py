@@ -28,6 +28,10 @@ def create_app():
     app.register_blueprint(student_bp)
     app.register_blueprint(teacher_bp)
     app.register_blueprint(analytics_bp)
+    
+    with app.app_context():
+        db.create_all()
+        
     return app
 
 

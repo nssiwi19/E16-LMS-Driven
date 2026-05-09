@@ -5,7 +5,10 @@ from flask_login import current_user
 
 
 def load_current_user():
-    g.user = current_user if current_user.is_authenticated else None
+    try:
+        g.user = current_user if current_user.is_authenticated else None
+    except Exception:
+        g.user = None
 
 
 def login_required(fn):

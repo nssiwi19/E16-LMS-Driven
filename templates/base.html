@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>E16 MCNA LMS</title>
+    <title>E16 LMS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -11,34 +11,68 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
-    <div class="bg-orb orb-a"></div>
-    <div class="bg-orb orb-b"></div>
-    <header class="topbar">
-      <div class="container topbar-inner">
-        <a href="{{ url_for('auth.home') }}" class="brand">
-          <span class="brand-dot"></span>
-          E16 LMS
-        </a>
-        <nav class="nav">
-          {% if user %}
-            <span class="pill">{{ user.role|upper }}</span>
-            <span class="user-email">{{ user.email }}</span>
-            <a class="link-btn" href="{{ url_for('auth.logout') }}">Đăng xuất</a>
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <div class="app-container">
+      {% if user %}
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <a href="{{ url_for('auth.home') }}" class="brand">
+            <div class="brand-icon"></div>
+            <span>E16 LMS</span>
+          </a>
+        </div>
+        <nav class="sidebar-nav">
+          {% if user.role == 'student' %}
+            <a href="{{ url_for('student.dashboard') }}" class="nav-item {% if request.blueprint == 'student' %}active{% endif %}">
+              <span>Dashboard</span>
+            </a>
+          {% elif user.role == 'teacher' %}
+            <a href="{{ url_for('teacher.manage_courses') }}" class="nav-item {% if request.blueprint == 'teacher' %}active{% endif %}">
+              <span>Manage Courses</span>
+            </a>
+          {% elif user.role == 'admin' %}
+            <a href="{{ url_for('analytics.dashboard') }}" class="nav-item {% if request.blueprint == 'analytics' %}active{% endif %}">
+              <span>Analytics</span>
+            </a>
           {% endif %}
         </nav>
-      </div>
-    </header>
-    <main class="container app-main">
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="flash-wrap">
-            {% for category, message in messages %}
-              <div class="flash {{ category }}">{{ message }}</div>
-            {% endfor %}
+        <div class="sidebar-footer">
+          <div class="user-info">
+            <span class="user-role">{{ user.role }}</span>
+            <span class="user-email">{{ user.email }}</span>
           </div>
-        {% endif %}
-      {% endwith %}
-      {% block content %}{% endblock %}
-    </main>
+          <a href="{{ url_for('auth.logout') }}" class="btn btn-outline btn-sm" style="width: 100%;">Đăng xuất</a>
+        </div>
+      </aside>
+      {% endif %}
+
+      <main class="main-content" style="{% if not user %}margin-left: 0; display: flex; align-items: center; justify-content: center; padding: 0;{% endif %}">
+        <div class="flash-messages">
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+        </div>
+        
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+
+    <script>
+      // Flash messages auto-hide
+      setTimeout(() => {
+        document.querySelectorAll('.flash').forEach(el => {
+          el.style.opacity = '0';
+          el.style.transform = 'translateX(20px)';
+          el.style.transition = 'all 0.5s ease';
+          setTimeout(() => el.remove(), 500);
+        });
+      }, 4000);
+    </script>
   </body>
 </html>
