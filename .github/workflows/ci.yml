@@ -32,10 +32,11 @@ jobs:
         SECRET_KEY: ci-test-key
         DATABASE_URL: sqlite:///test.db
       run: |
-        python verify.py
+        python scripts/verify.py
         
     - name: Run Tests
       env:
+        FLASK_ENV: development
         SECRET_KEY: ci-test-key
         DATABASE_URL: sqlite:///test.db
       run: |

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display: flex; align-items: center; justify-content: center; min-height: 60vh; flex-direction: column; text-align: center;">
+  <div style="font-size: 5rem; margin-bottom: 16px;">🔍</div>
+  <h1 style="font-size: 2rem; font-weight: 800; color: var(--text-main, #fff); margin-bottom: 8px;">404 — Không tìm thấy</h1>
+  <p style="color: var(--text-sub, #aaa); font-size: 1.1rem; max-width: 480px; margin-bottom: 24px;">
+    Trang bạn đang tìm không tồn tại hoặc đã bị di chuyển.
+  </p>
+  <a href="{{ url_for('auth.home') }}" class="btn btn-primary" style="text-decoration: none;">← Về trang chủ</a>
+</div>
+{% endblock %}

@@ -51,12 +51,13 @@ def list_courses():
 @login_required
 @role_required("student")
 def dashboard():
-    enrollments = db.session.query(Enrollment).filter(Enrollment.user_id == current_user.id).all()
+    from sqlalchemy.orm import joinedload
+    enrollments = db.session.query(Enrollment).options(joinedload(Enrollment.course)).filter(Enrollment.user_id == current_user.id).all()
     rows = []
     total_completed_lessons = 0
     
     for en in enrollments:
-        course = db.session.get(Course, en.course_id)
+        course = en.course
         if not course:
             continue
             
@@ -233,10 +234,10 @@ def submit_assignment(course_id, assignment_id):
             flash("Đã hết hạn nộp bài.", "error")
             return redirect(url_for("student.learn", course_id=course_id))
             
-        from ..services import StorageService
+        from ..services.storage import storage
         text_content = request.form.get("text_content")
         file = request.files.get("file")
-        file_path = StorageService.save_file(file, "assignments") if file and assignment.allow_file else None
+        file_path = storage.save_file(file, "assignments") if file and assignment.allow_file else None
             
         if existing_sub:
             existing_sub.text_content = text_content

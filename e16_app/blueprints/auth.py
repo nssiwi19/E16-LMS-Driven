@@ -1,6 +1,6 @@
 import os
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_user, logout_user
@@ -12,6 +12,10 @@ from ..services.course import recalc_total_lessons
 from ..services.logging import logger
 
 bp = Blueprint("auth", __name__)
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 
 @bp.route("/login/google")
@@ -32,7 +36,6 @@ def google_authorize():
     user = db.session.query(User).filter(User.email == email).first()
 
     if not user:
-        # Tự động tạo tài khoản nếu chưa có
         user = User(
             email=email,
             password_hash=generate_password_hash(secrets.token_urlsafe(16)),
@@ -41,7 +44,7 @@ def google_authorize():
         db.session.add(user)
         db.session.commit()
 
-    user.last_login = datetime.utcnow()
+    user.last_login = _utcnow()
     user.login_count = (user.login_count or 0) + 1
     db.session.commit()
 
@@ -49,14 +52,6 @@ def google_authorize():
     logger.log("login_google", user_id=user.id, user_email=user.email, metadata={"method": "google"})
     flash(f"Chào mừng {email}!", "success")
     return redirect(url_for("auth.home"))
-
-
-@bp.route("/test-flash")
-def test_flash():
-    flash("Đây là thông báo Thành công!", "success")
-    flash("Đây là thông báo Lỗi!", "error")
-    flash("Đây là thông báo Thông tin!", "info")
-    return redirect(url_for("auth.login"))
 
 
 @bp.route("/")
@@ -112,7 +107,7 @@ def login():
         if not user or not check_password_hash(user.password_hash, password):
             flash("Email hoặc mật khẩu không chính xác.", "error")
             return redirect(url_for("auth.login"))
-        user.last_login = datetime.utcnow()
+        user.last_login = _utcnow()
         user.login_count = (user.login_count or 0) + 1
         db.session.commit()
         login_user(user)
@@ -140,30 +135,51 @@ def forgot_password():
         if user:
             token = secrets.token_urlsafe(32)
             user.reset_token = token
-            user.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)
+            user.reset_token_expiry = _utcnow() + timedelta(hours=1)
             db.session.commit()
             reset_url = url_for("auth.reset_password", token=token, _external=True)
-            # Security: chỉ log trong chế độ debug, không bao giờ dùng print
-            if current_app.debug:
-                current_app.logger.debug(f"Password reset link for {email}: {reset_url}")
-            # TODO: Gửi email thật trong production bằng Flask-Mail
+            # Gửi email thật nếu SMTP đã cấu hình
+            _send_reset_email(email, reset_url)
         # Security: luôn trả về thông báo chung để chống email enumeration
         flash("Nếu email tồn tại trong hệ thống, một liên kết đặt lại mật khẩu sẽ được gửi.", "info")
         return redirect(url_for("auth.login"))
     return render_template("forgot_password.html", user=None)
 
 
+def _send_reset_email(email, reset_url):
+    """Gửi email reset password. Fallback sang logger nếu SMTP chưa cấu hình."""
+    try:
+        if current_app.config.get("MAIL_USERNAME"):
+            from ..services.mail import send_email
+            send_email(
+                to=email,
+                subject="E16 LMS — Đặt lại mật khẩu",
+                template_name="reset_password",
+                reset_url=reset_url,
+                email=email,
+            )
+            current_app.logger.info(f"Password reset email sent to {email}")
+        else:
+            # SMTP chưa cấu hình — chỉ log trong debug
+            if current_app.debug:
+                current_app.logger.debug(f"Password reset link for {email}: {reset_url}")
+    except Exception as e:
+        current_app.logger.error(f"Failed to send reset email to {email}: {e}")
+        if current_app.debug:
+            current_app.logger.debug(f"Password reset link for {email}: {reset_url}")
+
+
 @bp.route("/reset-password/<token>", methods=["GET", "POST"])
 def reset_password(token):
-    user = db.session.query(User).filter(User.reset_token == token, User.reset_token_expiry > datetime.utcnow()).first()
+    user = db.session.query(User).filter(User.reset_token == token, User.reset_token_expiry > _utcnow()).first()
     if not user:
         flash("Liên kết không hợp lệ hoặc đã hết hạn.", "error")
         return redirect(url_for("auth.login"))
     
     if request.method == "POST":
         password = request.form.get("password", "")
-        if not password:
-            flash("Mật khẩu không được để trống.", "error")
+        if not password or len(password) < 8:
+            flash("Mật khẩu phải có ít nhất 8 ký tự.", "error")
             return redirect(url_for("auth.reset_password", token=token))
         user.password_hash = generate_password_hash(password)
         user.reset_token = None
@@ -174,21 +190,24 @@ def reset_password(token):
     return render_template("reset_password.html", token=token, user=None)
 
 
+# --- Seed ---
+
 @bp.route("/seed")
 def seed():
-    import random
-    from ..models import Category
-    
-    # Security: Require key to seed
     seed_password = os.getenv("E16_SEED_PASSWORD", "demo-password")
     request_key = request.args.get("key")
     if request_key != seed_password:
         return "Unauthorized: Invalid seed key.", 403
+    return _run_seed(seed_password)
 
-    # Safe initialization
+
+def _run_seed(seed_password):
+    """Core seed logic — shared between HTTP route and CLI command."""
+    import random
+    from ..models import Category
+    
     db.create_all() 
     
-    # Create Categories
     cats_data = [
         ("Technology", "tech", "💻"),
         ("Design", "design", "🎨"),
@@ -204,7 +223,6 @@ def seed():
             db.session.commit()
         categories[slug] = cat
 
-    # Create extra student accounts if they don't exist
     students = []
     for i in range(1, 6):
         email = f"student{i}@e16.local"
@@ -215,7 +233,6 @@ def seed():
         db.session.add_all(students)
         db.session.commit()
 
-    # Create roles if missing
     teacher = db.session.query(User).filter_by(email="teacher@e16.local").first()
     if not teacher:
         teacher = User(email="teacher@e16.local", password_hash=generate_password_hash(seed_password), role="teacher")
@@ -227,7 +244,6 @@ def seed():
         db.session.add(admin)
     db.session.commit()
 
-    # Diverse courses
     course_data = [
         ("AI for Beginners", "Làm quen với AI", "Khám phá thế giới trí tuệ nhân tạo từ con số 0.", "https://images.unsplash.com/photo-1677442136019-21780ecad995", "tech"),
         ("UI/UX Design Essentials", "Thiết kế đỉnh cao", "Thiết kế giao diện người dùng đỉnh cao với Figma.", "https://images.unsplash.com/photo-1586717791821-3f44a563dc4c", "design"),
@@ -248,14 +264,12 @@ def seed():
             )
             db.session.add(c)
             db.session.commit()
-            # Add some lessons to each
             for j in range(1, 4):
                 l = Lesson(course_id=c.id, title=f"Bài học {j}: {title}", sequence_order=j)
                 db.session.add(l)
             db.session.commit()
             recalc_total_lessons(c.id)
 
-    # Randomized Learning Logs for Analytics
     all_students = db.session.query(User).filter(User.role == "student").all()
     all_courses = db.session.query(Course).all()
     
@@ -274,9 +288,9 @@ def seed():
                     lessons = db.session.query(Lesson).filter_by(course_id=c.id).all()
                     for l in lessons:
                         if random.random() > 0.3:
-                            db.session.add(LearningLog(user_id=s.id, lesson_id=l.id, action_type="start", timestamp=datetime.utcnow() - timedelta(days=random.randint(0, 7))))
+                            db.session.add(LearningLog(user_id=s.id, lesson_id=l.id, action_type="start", timestamp=_utcnow() - timedelta(days=random.randint(0, 7))))
                         if random.random() > 0.5:
-                            db.session.add(LearningLog(user_id=s.id, lesson_id=l.id, action_type="complete", timestamp=datetime.utcnow() - timedelta(days=random.randint(0, 7))))
+                            db.session.add(LearningLog(user_id=s.id, lesson_id=l.id, action_type="complete", timestamp=_utcnow() - timedelta(days=random.randint(0, 7))))
                     db.session.commit()
 
     return "Seeded rich demo data successfully with Categories and enhanced Course info."

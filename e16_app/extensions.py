@@ -24,4 +24,10 @@ login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 oauth = OAuth()
 mail = Mail()
-limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
+import os
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri=os.getenv("RATELIMIT_STORAGE_URI", "memory://"),
+)

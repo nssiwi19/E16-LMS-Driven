@@ -3,6 +3,7 @@ __pycache__/
 instance/*.db
 instance/*.pre_migration_backup
 *.sqlite3
+*.csv
 .env
 .pytest_cache/
 scripts/
