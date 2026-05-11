@@ -12,6 +12,7 @@
     <div class="card">
       <h2 style="margin-bottom: 20px;">Tạo khóa học mới</h2>
       <form action="{{ url_for('teacher.create_course') }}" method="post" class="form-group">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
           <label>Tên khóa học</label>
           <input type="text" name="title" placeholder="VD: Data-Driven Product Management" required>
@@ -60,11 +61,13 @@
               
               {% if course.status in ['draft', 'rejected'] %}
                 <form action="{{ url_for('teacher.submit_course', course_id=course.id) }}" method="post" style="display: inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="btn btn-primary btn-sm">Gửi duyệt</button>
                 </form>
               {% endif %}
               
               <form action="{{ url_for('teacher.delete_course', course_id=course.id) }}" method="post" style="display: inline;" onsubmit="return confirm('Xóa toàn bộ khóa học?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
               </form>
             </div>

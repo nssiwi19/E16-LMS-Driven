@@ -29,6 +29,7 @@
             <a href="{{ url_for('student.learn', course_id=course.id) }}" target="_blank" class="btn btn-outline btn-sm">Xem Preview</a>
             
             <form action="{{ url_for('admin.approve_course', course_id=course.id) }}" method="post" onsubmit="return confirm('Phê duyệt khóa học này?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn btn-primary btn-sm">Duyệt xuất bản</button>
             </form>
             
@@ -37,6 +38,7 @@
 
           <div id="reject-form-{{ course.id }}" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--card-border);">
             <form action="{{ url_for('admin.reject_course', course_id=course.id) }}" method="post" class="form-group">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <label>Lý do từ chối (Gửi đến giảng viên)</label>
               <textarea name="rejection_note" rows="2" placeholder="Vd: Nội dung video chưa đạt chất lượng..." required></textarea>
               <div style="display: flex; gap: 8px; margin-top: 12px;">

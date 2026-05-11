@@ -35,35 +35,7 @@ def create_course():
     return redirect(url_for("teacher.manage_courses"))
 
 
-@bp.post("/courses/<course_id>/submit")
-@login_required
-@role_required("teacher")
-def submit_course(course_id):
-    course = db.session.get(Course, course_id)
-    if course and course.teacher_id == current_user.id:
-        if course.total_lessons == 0:
-            flash("Bạn cần có ít nhất một bài học để gửi duyệt.", "error")
-        else:
-            course.status = "pending_review"
-            course.submitted_at = datetime.utcnow()
-            db.session.commit()
-            log_action("course_submitted", "Course", course_id)
-            flash("Đã gửi khóa học để chờ duyệt.", "success")
-    return redirect(url_for("teacher.manage_courses"))
 
-
-@bp.post("/courses/<course_id>/delete")
-@login_required
-@role_required("teacher")
-def delete_course(course_id):
-    course = db.session.get(Course, course_id)
-    if course and course.teacher_id == current_user.id:
-        title = course.title
-        db.session.delete(course)
-        db.session.commit()
-        log_action("course_deleted", "Course", course_id, {"title": title})
-        flash("Đã xóa khóa học.", "success")
-    return redirect(url_for("teacher.manage_courses"))
 
 
 @bp.route("/courses/<course_id>/edit", methods=["GET", "POST"])
@@ -414,10 +386,11 @@ def grade_submission(submission_id):
     if not sub or course.teacher_id != current_user.id:
         return redirect(url_for("teacher.manage_courses"))
         
-    sub.score = int(request.form.get("score", 0))
-    sub.feedback = request.form.get("feedback")
-    sub.status = "graded"
-    db.session.commit()
+    score = int(request.form.get("score", 0))
+    feedback = request.form.get("feedback")
+    
+    from ..services import GradingService
+    GradingService.grade_assignment_submission(submission_id, score, feedback, current_user.id)
 
     # Notify student
     from ..services.notifications import notify
@@ -463,19 +436,23 @@ def view_gradebook(course_id):
     quizzes = db.session.query(Quiz).filter_by(course_id=course_id, is_published=True).all()
     assignments = db.session.query(Assignment).filter_by(course_id=course_id).all()
     
-    # pivot table: scores[user_id][item_type_id]
-    scores = {}
-    for s in students:
-        scores[s.id] = {}
-        # Get best quiz attempts
-        for q in quizzes:
-            best_attempt = db.session.query(func.max(QuizAttempt.score)).filter_by(user_id=s.id, quiz_id=q.id).scalar()
-            scores[s.id][f"quiz_{q.id}"] = best_attempt
+    # Optimized: Fetch all scores in bulk to avoid N+1 queries
+    quiz_attempts = db.session.query(
+        QuizAttempt.user_id, QuizAttempt.quiz_id, func.max(QuizAttempt.score)
+    ).filter(QuizAttempt.quiz_id.in_([q.id for q in quizzes])).group_by(QuizAttempt.user_id, QuizAttempt.quiz_id).all()
+    
+    submissions_list = db.session.query(
+        Submission.user_id, Submission.assignment_id, Submission.score
+    ).filter(Submission.assignment_id.in_([a.id for a in assignments])).all()
+
+    scores = {s.id: {} for s in students}
+    for uid, qid, score in quiz_attempts:
+        if uid in scores:
+            scores[uid][f"quiz_{qid}"] = score
             
-        # Get assignment submissions
-        for a in assignments:
-            sub = db.session.query(Submission).filter_by(user_id=s.id, assignment_id=a.id).first()
-            scores[s.id][f"assign_{a.id}"] = sub.score if sub else None
+    for uid, aid, score in submissions_list:
+        if uid in scores:
+            scores[uid][f"assign_{aid}"] = score
             
     return render_template("gradebook.html", course=course, students=students, quizzes=quizzes, assignments=assignments, scores=scores)
 
@@ -499,14 +476,29 @@ def export_gradebook(course_id):
     for a in assignments: header.append(f"Assign: {a.title}")
     writer.writerow(header)
     
+    # Optimized: Bulk fetch scores
+    quiz_attempts = db.session.query(
+        QuizAttempt.user_id, QuizAttempt.quiz_id, func.max(QuizAttempt.score)
+    ).filter(QuizAttempt.quiz_id.in_([q.id for q in quizzes])).group_by(QuizAttempt.user_id, QuizAttempt.quiz_id).all()
+    
+    submissions_list = db.session.query(
+        Submission.user_id, Submission.assignment_id, Submission.score
+    ).filter(Submission.assignment_id.in_([a.id for a in assignments])).all()
+
+    scores_map = {s.id: {} for s in students}
+    for uid, qid, score in quiz_attempts:
+        if uid in scores_map: scores_map[uid][f"quiz_{qid}"] = score
+    for uid, aid, score in submissions_list:
+        if uid in scores_map: scores_map[uid][f"assign_{aid}"] = score
+
     for s in students:
         row = [s.email, s.email.split('@')[0]]
         for q in quizzes:
-            score = db.session.query(func.max(QuizAttempt.score)).filter_by(user_id=s.id, quiz_id=q.id).scalar()
+            score = scores_map[s.id].get(f"quiz_{q.id}")
             row.append(score if score is not None else 'N/A')
         for a in assignments:
-            sub = db.session.query(Submission).filter_by(user_id=s.id, assignment_id=a.id).first()
-            row.append(sub.score if sub and sub.score is not None else 'N/A')
+            score = scores_map[s.id].get(f"assign_{a.id}")
+            row.append(score if score is not None else 'N/A')
         writer.writerow(row)
         
     response = make_response(output.getvalue())
@@ -528,11 +520,16 @@ def course_analytics(course_id):
     enrollment_count = db.session.query(Enrollment).filter_by(course_id=course_id).count()
     completed_count = db.session.query(Enrollment).filter_by(course_id=course_id, status="completed").count()
     
-    # Funnel data: count students who completed each lesson
-    funnel_data = []
-    for ls in lessons:
-        count = db.session.query(func.count(func.distinct(LearningLog.user_id))).filter_by(lesson_id=ls.id, action_type="complete").scalar()
-        funnel_data.append({"title": ls.title, "count": count})
+    # Optimized: Funnel data using GROUP BY
+    completion_stats = db.session.query(
+        LearningLog.lesson_id, func.count(func.distinct(LearningLog.user_id))
+    ).filter(
+        LearningLog.lesson_id.in_([ls.id for ls in lessons]),
+        LearningLog.action_type == "complete"
+    ).group_by(LearningLog.lesson_id).all()
+    
+    stats_map = {sid: count for sid, count in completion_stats}
+    funnel_data = [{"title": ls.title, "count": stats_map.get(ls.id, 0)} for ls in lessons]
         
     # Quiz averages
     quizzes = db.session.query(Quiz).filter_by(course_id=course_id).all()

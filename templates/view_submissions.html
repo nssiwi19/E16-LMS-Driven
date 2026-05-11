@@ -45,6 +45,7 @@
             <div style="border-left: 1px solid var(--card-border); padding-left: 32px;">
               <h4 style="margin-bottom: 12px;">Chấm điểm & Nhận xét</h4>
               <form action="{{ url_for('teacher.grade_submission', submission_id=sub.id) }}" method="post" class="form-group">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                   <label>Điểm (0 - 100)</label>
                   <input type="number" name="score" value="{{ sub.score or 0 }}" min="0" max="100" required>

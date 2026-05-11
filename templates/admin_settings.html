@@ -9,6 +9,7 @@
 
 <div class="card" style="max-width: 800px;">
   <form action="{{ url_for('admin.update_settings') }}" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% for s in settings %}
       <div class="form-group" style="margin-bottom: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">

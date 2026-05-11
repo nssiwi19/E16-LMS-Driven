@@ -3,6 +3,7 @@ from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from authlib.integrations.flask_client import OAuth
 from flask_mail import Mail
+from flask_wtf.csrf import CSRFProtect
 
 from sqlalchemy import MetaData
 
@@ -16,6 +17,7 @@ naming_convention = {
 
 db = SQLAlchemy(metadata=MetaData(naming_convention=naming_convention))
 migrate = Migrate()
+csrf = CSRFProtect()
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 oauth = OAuth()

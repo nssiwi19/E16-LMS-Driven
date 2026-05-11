@@ -9,6 +9,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from ..extensions import db, oauth
 from ..models import Course, Enrollment, LearningLog, Lesson, User
 from ..services.course import recalc_total_lessons
+from ..services.logging import logger
 
 bp = Blueprint("auth", __name__)
 
@@ -45,6 +46,7 @@ def google_authorize():
     db.session.commit()
 
     login_user(user)
+    logger.log("login_google", user_id=user.id, user_email=user.email, metadata={"method": "google"})
     flash(f"Chào mừng {email}!", "success")
     return redirect(url_for("auth.home"))
 
@@ -88,6 +90,7 @@ def register():
         user = User(email=email, password_hash=generate_password_hash(password), role=role)
         db.session.add(user)
         db.session.commit()
+        logger.log("register", user_id=user.id, user_email=user.email, metadata={"role": role})
         flash("Đăng ký thành công. Mời đăng nhập.", "success")
         return redirect(url_for("auth.login"))
     return render_template("register.html")
@@ -108,12 +111,15 @@ def login():
         user.login_count = (user.login_count or 0) + 1
         db.session.commit()
         login_user(user)
+        logger.log("login", user_id=user.id, user_email=user.email, metadata={"method": "email"})
         return redirect(url_for("auth.home"))
     return render_template("login.html")
 
 
 @bp.route("/logout")
 def logout():
+    if current_user.is_authenticated:
+        logger.log("logout", user_id=current_user.id, user_email=current_user.email)
     logout_user()
     return redirect(url_for("auth.login"))
 

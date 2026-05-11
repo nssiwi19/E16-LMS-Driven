@@ -16,6 +16,7 @@
     <button onclick="document.getElementById('new-cat-form').style.display='none'" class="btn btn-outline btn-sm">Đóng</button>
   </div>
   <form action="{{ url_for('admin.create_category') }}" method="post" class="form-group">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="grid-2">
       <div class="form-group">
         <label>Tên danh mục</label>
@@ -56,6 +57,7 @@
             <div style="display: flex; gap: 8px; justify-content: flex-end;">
               <button onclick="alert('Tính năng sửa nhanh đang phát triển!')" class="btn btn-outline btn-sm">Sửa</button>
               <form action="{{ url_for('admin.delete_category', cat_id=cat.id) }}" method="post" onsubmit="return confirm('Xóa danh mục này?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
               </form>
             </div>

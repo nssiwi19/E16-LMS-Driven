@@ -11,6 +11,7 @@
   <section class="card">
     <h2 style="margin-bottom: 20px;">Tải lên File CSV</h2>
     <form action="{{ url_for('admin.import_users') }}" method="post" enctype="multipart/form-data" class="form-group">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="form-group">
         <label>Chọn file (.csv)</label>
         <input type="file" name="file" accept=".csv" required style="padding: 12px; background: var(--bg-soft); border-radius: 8px; width: 100%;">

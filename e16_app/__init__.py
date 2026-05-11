@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from flask import Flask
 from flask_login import current_user
 
-from .extensions import db, login_manager, migrate, oauth, mail
+from .extensions import db, login_manager, migrate, oauth, mail, csrf
 
 def create_app():
     load_dotenv()
@@ -32,10 +32,16 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    csrf.init_app(app)
     login_manager.init_app(app)
     oauth.init_app(app)
     mail.init_app(app)
     
+    @app.route("/")
+    def index():
+        from flask import redirect, url_for
+        return redirect(url_for("auth.home"))
+
     # IMPORT MODELS HERE so they register with SQLAlchemy metadata
     from . import models
     
@@ -47,7 +53,7 @@ def create_app():
     from .blueprints.analytics import bp as analytics_bp
     from .blueprints.communication import bp as communication_bp
 
-    app.register_blueprint(auth_bp)
+    app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(student_bp)
     app.register_blueprint(teacher_bp)
     app.register_blueprint(admin_bp)

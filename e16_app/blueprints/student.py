@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import Blueprint, flash, redirect, render_template, request, url_for, current_app
 from flask_login import current_user
@@ -7,6 +8,7 @@ from sqlalchemy import func
 from ..auth_utils import login_required, role_required
 from ..extensions import db
 from ..models import Category, Course, Enrollment, LearningLog, Lesson, Quiz, Question, Choice, QuizAttempt, QuizAnswer, Assignment, Submission, Certificate
+from ..services.logging import logger
 
 bp = Blueprint("student", __name__)
 
@@ -116,6 +118,7 @@ def enroll(course_id):
     if not exists:
         db.session.add(Enrollment(user_id=current_user.id, course_id=course_id, status="active"))
         db.session.commit()
+        logger.log("enroll_course", user_id=current_user.id, user_email=current_user.email, resource_type="course", resource_id=course_id, metadata={"course_title": course.title})
         flash(f"Đăng ký thành công khóa học {course.title}!", "success")
     
     return redirect(url_for("student.learn", course_id=course_id))
@@ -145,6 +148,7 @@ def learn(course_id):
     
     db.session.add(LearningLog(user_id=current_user.id, lesson_id=selected_lesson.id, action_type="start", timestamp=datetime.utcnow()))
     db.session.commit()
+    logger.log("view_lesson", user_id=current_user.id, user_email=current_user.email, resource_type="lesson", resource_id=selected_lesson.id, metadata={"course_id": course_id, "lesson_title": selected_lesson.title})
 
     completed_ids = {
         row[0]
@@ -179,6 +183,7 @@ def mark_complete(course_id, lesson_id):
     if not exists:
         db.session.add(LearningLog(user_id=current_user.id, lesson_id=lesson_id, action_type="complete", timestamp=datetime.utcnow()))
         db.session.commit()
+        logger.log("complete_lesson", user_id=current_user.id, user_email=current_user.email, resource_type="lesson", resource_id=lesson_id, metadata={"course_id": course_id})
         update_enrollment_if_completed(current_user.id, course_id)
         
     return redirect(url_for("student.learn", course_id=course_id, lesson=lesson_id))
@@ -200,27 +205,14 @@ def take_quiz(course_id, quiz_id):
         return redirect(url_for("student.learn", course_id=course_id))
         
     if request.method == "POST":
-        # Grading
-        questions = db.session.query(Question).filter_by(quiz_id=quiz_id).all()
-        correct_count = 0
+        from ..services import GradingService
+        attempt = GradingService.grade_quiz_attempt(current_user.id, quiz_id, request.form.to_dict())
         
-        attempt = QuizAttempt(quiz_id=quiz_id, user_id=current_user.id)
-        db.session.add(attempt)
-        db.session.commit()
-        
-        for q in questions:
-            choice_id = request.form.get(f"question_{q.id}")
-            if choice_id:
-                db.session.add(QuizAnswer(attempt_id=attempt.id, question_id=q.id, choice_id=choice_id))
-                choice = db.session.get(Choice, choice_id)
-                if choice and choice.is_correct:
-                    correct_count += 1
-        
-        score = (correct_count / len(questions) * 100) if questions else 0
-        attempt.score = int(score)
-        attempt.passed = score >= quiz.pass_score
-        db.session.commit()
-        
+        if not attempt:
+            flash("Có lỗi xảy ra khi chấm điểm.", "error")
+            return redirect(url_for("student.learn", course_id=course_id))
+
+        logger.log("complete_quiz", user_id=current_user.id, user_email=current_user.email, resource_type="quiz", resource_id=quiz_id, metadata={"score": attempt.score, "course_id": course_id})
         return render_template("quiz_result.html", quiz=quiz, attempt=attempt, course_id=course_id)
         
     questions = db.session.query(Question).filter_by(quiz_id=quiz_id).all()
@@ -241,20 +233,14 @@ def submit_assignment(course_id, assignment_id):
             flash("Đã hết hạn nộp bài.", "error")
             return redirect(url_for("student.learn", course_id=course_id))
             
+        from ..services import StorageService
         text_content = request.form.get("text_content")
         file = request.files.get("file")
-        file_path = None
-        
-        if file and assignment.allow_file:
-            filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
-            upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'assignments')
-            os.makedirs(upload_dir, exist_ok=True)
-            file.save(os.path.join(upload_dir, filename))
-            file_path = f"uploads/assignments/{filename}"
+        file_path = StorageService.save_file(file, "assignments") if file and assignment.allow_file else None
             
         if existing_sub:
             existing_sub.text_content = text_content
-            existing_sub.file_path = file_path or existing_sub.file_path
+            if file_path: existing_sub.file_path = file_path
             existing_sub.submitted_at = datetime.utcnow()
             existing_sub.status = "pending"
         else:

@@ -10,6 +10,7 @@
 
 <div class="card" style="max-width: 800px; margin: 0 auto;">
   <form action="{{ url_for('student.take_quiz', course_id=course_id, quiz_id=quiz.id) }}" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% for q in questions %}
       <div style="margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--card-border);">
         <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 16px;">{{ loop.index }}. {{ q.text }}</div>

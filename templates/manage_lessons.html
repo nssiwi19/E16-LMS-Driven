@@ -16,6 +16,7 @@
     <div class="card">
       <h2 style="margin-bottom: 20px;">Thêm bài học mới</h2>
       <form action="{{ url_for('teacher.create_lesson', course_id=course.id) }}" method="post" class="form-group">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
           <label>Tên bài học</label>
           <input type="text" name="title" placeholder="VD: Giới thiệu về Product Metrics" required>
@@ -38,6 +39,7 @@
       <h2 style="margin-bottom: 20px;">Danh sách bài học ({{ lessons|length }})</h2>
       {% if lessons %}
         <form action="{{ url_for('teacher.reorder_lessons', course_id=course.id) }}" method="post" id="reorder-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div id="lesson-list">
             {% for ls in lessons %}
               <div class="lesson-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--card-border);">
@@ -49,6 +51,7 @@
                 <div class="actions">
                   <a href="{{ url_for('teacher.edit_lesson', course_id=course.id, lesson_id=ls.id) }}" class="btn btn-outline btn-sm">Sửa</a>
                   <form action="{{ url_for('teacher.delete_lesson', course_id=course.id, lesson_id=ls.id) }}" method="post" style="display: inline;" onsubmit="return confirm('Xóa bài học này?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
                   </form>
                 </div>

@@ -12,6 +12,7 @@
     <div class="card">
       <h2 style="margin-bottom: 20px;">Cấu hình Quiz</h2>
       <form action="{{ url_for('teacher.create_quiz', course_id=course.id) if not quiz else url_for('teacher.edit_quiz', course_id=course.id, quiz_id=quiz.id) }}" method="post" class="form-group">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
           <label>Tiêu đề</label>
           <input type="text" name="title" value="{{ quiz.title if quiz else '' }}" required>
@@ -56,6 +57,7 @@
       <div style="margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--card-border);">
         <h3>Thêm câu hỏi mới</h3>
         <form action="{{ url_for('teacher.add_question', quiz_id=quiz.id) }}" method="post" class="form-group">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="form-group">
             <label>Nội dung câu hỏi</label>
             <textarea name="text" rows="2" required></textarea>
