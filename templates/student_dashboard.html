@@ -5,53 +5,78 @@
     <h1>Chào mừng trở lại!</h1>
     <p>Tiếp tục hành trình chinh phục kiến thức của bạn.</p>
   </div>
+  <div class="actions">
+    <a href="{{ url_for('student.list_courses') }}" class="btn btn-primary">Khám phá khóa học mới</a>
+  </div>
 </header>
 
-{% if rows %}
-<section style="margin-bottom: 48px;">
-  <h2 style="margin-bottom: 24px;">Khóa học của tôi</h2>
-  <div class="course-grid">
-    {% for row in rows %}
-    <div class="card course-card">
-      <img src="{{ row.course.cover_image_url or 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3' }}" alt="{{ row.course.title }}" class="course-image">
-      <h3 class="course-title">{{ row.course.title }}</h3>
-      <div class="progress-container">
-        <div class="progress-label">
-          <span>Tiến độ</span>
-          <span>{{ row.my_rate|round|int }}%</span>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width: {{ row.my_rate }}%;"></div>
-        </div>
-      </div>
-      <div class="progress-label" style="margin-top: -8px; margin-bottom: 20px;">
-        <span>Trung bình lớp: {{ row.avg_rate|round|int }}%</span>
-      </div>
-      <a href="{{ url_for('student.learn', course_id=row.course.id) }}" class="btn btn-primary">Học tiếp</a>
-    </div>
-    {% endfor %}
+<div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px;">
+  <div class="card stat-card">
+    <div class="stat-value">{{ stats.total_courses }}</div>
+    <div class="stat-label">Khóa học của tôi</div>
   </div>
-</section>
-{% endif %}
+  <div class="card stat-card">
+    <div class="stat-value">{{ stats.total_completed_lessons }}</div>
+    <div class="stat-label">Bài học đã xong</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-value">{{ stats.streak }}</div>
+    <div class="stat-label">Ngày học liên tiếp</div>
+  </div>
+</div>
 
-<section>
-  <h2 style="margin-bottom: 24px;">Khám phá khóa học mới</h2>
-  <div class="course-grid">
-    {% for course in available_courses %}
-      {% if course.id not in enrolled_course_ids %}
-      <div class="card course-card">
-        <img src="{{ course.cover_image_url or 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3' }}" alt="{{ course.title }}" class="course-image">
-        <h3 class="course-title">{{ course.title }}</h3>
-        <p class="course-desc">{{ course.description[:100] }}...</p>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span class="pill">{{ course.total_lessons }} bài học</span>
-          <form action="{{ url_for('student.enroll', course_id=course.id) }}" method="post">
-            <button type="submit" class="btn btn-primary btn-sm">Đăng ký ngay</button>
-          </form>
-        </div>
+<div class="grid-2" style="display: grid; grid-template-columns: 2fr 1fr; gap: 32px;">
+  <section>
+    <h2 style="margin-bottom: 24px;">Khóa học đang học</h2>
+    {% if rows %}
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        {% for row in rows %}
+          <div class="card" style="display: flex; gap: 24px; align-items: center;">
+            <img src="{{ row.course.cover_image_url or 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3' }}" alt="" style="width: 100px; height: 100px; border-radius: 12px; object-fit: cover;">
+            <div style="flex: 1;">
+              <h3 style="margin-bottom: 8px;">{{ row.course.title }}</h3>
+              <div class="progress-container" style="margin-bottom: 12px;">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: {{ row.my_rate }}%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-top: 4px; color: var(--text-muted);">
+                  <span>Tiến độ: {{ row.my_rate|round|int }}%</span>
+                  <span>TB lớp: {{ row.avg_rate|round|int }}%</span>
+                </div>
+              </div>
+              {% if row.next_lesson %}
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Tiếp theo: <strong>{{ row.next_lesson.title }}</strong></p>
+                <a href="{{ url_for('student.learn', course_id=row.course.id, lesson=row.next_lesson.id) }}" class="btn btn-primary btn-sm">Học tiếp</a>
+              {% else %}
+                <p style="font-size: 0.85rem; color: var(--success); margin-bottom: 12px;">🎉 Bạn đã hoàn thành khóa học!</p>
+                <a href="{{ url_for('student.learn', course_id=row.course.id) }}" class="btn btn-outline btn-sm">Xem lại</a>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
       </div>
+    {% else %}
+      <div class="empty-box">Bạn chưa đăng ký khóa học nào. Hãy khám phá ngay!</div>
+    {% endif %}
+  </section>
+
+  <aside>
+    <h2 style="margin-bottom: 24px;">Hoạt động gần đây</h2>
+    <div class="card" style="padding: 0;">
+      {% if recent_logs %}
+        {% for log, lesson in recent_logs %}
+          <div style="padding: 16px; border-bottom: 1px solid var(--card-border); display: flex; gap: 12px; align-items: flex-start;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); margin-top: 6px;"></div>
+            <div style="flex: 1;">
+              <p style="font-size: 0.9rem; margin-bottom: 4px;">Đã hoàn thành <strong>{{ lesson.title }}</strong></p>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">{{ log.timestamp.strftime('%d/%m/%Y %H:%M') }}</span>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div style="padding: 32px; text-align: center; color: var(--text-muted);">Chưa có hoạt động nào.</div>
       {% endif %}
-    {% endfor %}
-  </div>
-</section>
+    </div>
+  </aside>
+</div>
 {% endblock %}

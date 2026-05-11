@@ -1,57 +1,60 @@
-# E16 LMS (Premium Data-Driven MVP)
+# E16 LMS - Premium Learning Management System
 
-A high-performance, Flask-based Learning Management System designed with a data-first approach for educational analytics.
+E16 LMS là một nền tảng quản lý học tập hiện đại, được thiết kế với trải nghiệm người dùng cao cấp (Premium UI/UX) và các tính năng vận hành mạnh mẽ dành cho doanh nghiệp và trường học.
 
-## 🚀 Features
-- **Role-Based Access Control (RBAC):** Distinct workflows for `Students`, `Teachers`, and `Admins`.
-- **Learning Analytics:** Real-time tracking of student progress via `LearningLog`.
-- **Modern UI:** Premium dark-mode interface with glassmorphism and responsive design.
-- **Production Ready:** Dockerized with Gunicorn and PostgreSQL support.
+![Dashboard Preview](https://images.unsplash.com/photo-1501504905252-473c47e087f8?q=80&w=1974&auto=format&fit=crop)
 
-## 🛠️ Tech Stack
-- **Backend:** Python 3.12+, Flask, Flask-SQLAlchemy, Flask-Migrate
-- **Database:** PostgreSQL (Production), SQLite (Development)
-- **Frontend:** HTML5, Vanilla CSS, Chart.js
-- **DevOps:** Docker, Docker Compose
+## ✨ Tính năng nổi bật
 
-## 💻 Installation
+- **Premium Interface**: Giao diện Glassmorphism hiện đại, hỗ trợ Dark/Light mode linh hoạt.
+- **Role-based Access**: Phân quyền chi tiết cho Admin, Teacher và Student.
+- **Interactive Learning**: Bài học Video/Document, Quiz trắc nghiệm, Nộp bài tập (Assignment).
+- **Academic Records**: Sổ điểm (Gradebook), Học bạ điện tử (Transcript), Chứng chỉ hoàn thành tự động.
+- **Communication**: Diễn đàn thảo luận (Forum), Thông báo (Notification), Email Alert.
+- **Admin Tools**: Phân tích dữ liệu (Analytics), Import người dùng hàng loạt, Nhật ký hệ thống (Audit Log).
 
-### 1. Environment Setup
-Clone the repository and create your environment file:
+## 🚀 Cài đặt nhanh (Onboarding)
+
+### 1. Chuẩn bị môi trường
+Yêu cầu Python 3.11+.
+
 ```bash
+# Clone repository
+git clone https://github.com/nssiwi19/E16-LMS-Driven.git
+cd E16-LMS-Driven
+
+# Cấu hình biến môi trường
 cp .env.example .env
-# Edit .env with your specific secrets
+# Chỉnh sửa .env với các thông số của bạn (SECRET_KEY, MAIL, GOOGLE_OAUTH...)
 ```
 
-### 2. Run with Docker (Recommended)
+### 2. Cài đặt tự động với Makefile
 ```bash
-docker-compose up --build
-```
-The app will be available at `http://localhost:5000`.
+# Cài đặt thư viện
+make install
 
-### 3. Manual Installation
-**Windows (PowerShell):**
-```powershell
-.\start_e16.ps1
-```
-**Linux/macOS:**
-```bash
-chmod +x start.sh
-./start.sh
+# Khởi tạo Database (SQLite mặc định)
+make migrate
+
+# Chạy ứng dụng Development
+make dev
 ```
 
-## 🔒 Security & Deployment
-- **Debug Mode:** Managed via `FLASK_DEBUG` environment variable. Never enable in production.
-- **Database Seeding:** The `/seed` route is protected. Use `http://your-domain.com/seed?key=YOUR_SEED_PASSWORD`.
-- **Database Migrations:** Always use `flask db upgrade` to apply schema changes.
+### 3. Khởi tạo dữ liệu mẫu (Seed)
+1. Đăng nhập với tài khoản Admin mặc định (nếu đã seed qua script) hoặc tạo mới.
+2. Truy cập `/admin/seed` (yêu cầu `FLASK_ENV=development`) để khởi tạo Danh mục và Cấu hình hệ thống.
 
-## 📊 Data Analysis (DA) Workflow
-The system exports learning logs in CSV format, optimized for integration with BI tools or Python data science libraries.
-- Columns: `student_email`, `course_title`, `lesson_title`, `action_type`, `timestamp`.
+## 🛠️ Công nghệ sử dụng
+- **Backend**: Flask, SQLAlchemy, Flask-Migrate, Flask-Login.
+- **Frontend**: Vanilla HTML/CSS/JS (Modern CSS Grid & Flexbox).
+- **Database**: SQLite (Dev) / PostgreSQL (Prod).
+- **Communication**: Flask-Mail (SMTP), Chart.js (Analytics).
 
-## 🤝 Handover Notes
-To deploy for a client:
-1. Set up a managed PostgreSQL instance.
-2. Configure `DATABASE_URL` and a strong `SECRET_KEY` in the hosting environment.
-3. Map a custom domain with SSL enabled.
-4. Run the seed route once to initialize the platform.
+## 🔑 Tài khoản mặc định (Test Data)
+- **Admin**: `admin@e16.edu.vn` / `admin123` (Cần chạy seed)
+- **Teacher**: `teacher@e16.edu.vn` / `teacher123`
+- **Student**: `student@e16.edu.vn` / `student123`
+
+---
+
+© 2024 E16 Education Team. All rights reserved.

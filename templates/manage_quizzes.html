@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <a href="{{ url_for('teacher.manage_courses') }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại khóa học</a>
+    <h1>Quản lý Trắc nghiệm: {{ course.title }}</h1>
+  </div>
+  <div class="actions">
+    <a href="{{ url_for('teacher.create_quiz', course_id=course.id) }}" class="btn btn-primary">Tạo Quiz mới</a>
+  </div>
+</header>
+
+<div class="card">
+  {% if quizzes %}
+    <table class="table" style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="text-align: left; border-bottom: 1px solid var(--card-border);">
+          <th style="padding: 12px;">Tiêu đề</th>
+          <th style="padding: 12px;">Điểm đạt</th>
+          <th style="padding: 12px;">Lượt làm bài</th>
+          <th style="padding: 12px;">Trạng thái</th>
+          <th style="padding: 12px;">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in quizzes %}
+          <tr style="border-bottom: 1px solid var(--card-border);">
+            <td style="padding: 12px; font-weight: 600;">{{ q.title }}</td>
+            <td style="padding: 12px;">{{ q.pass_score }}%</td>
+            <td style="padding: 12px;">{{ q.max_attempts }}</td>
+            <td style="padding: 12px;">
+              <span class="badge" style="background: {% if q.is_published %}rgba(34, 197, 94, 0.2){% else %}rgba(239, 68, 68, 0.2){% endif %}; color: {% if q.is_published %}rgb(34, 197, 94){% else %}rgb(239, 68, 68){% endif %};">
+                {{ 'Công khai' if q.is_published else 'Bản nháp' }}
+              </span>
+            </td>
+            <td style="padding: 12px;">
+              <a href="{{ url_for('teacher.edit_quiz', course_id=course.id, quiz_id=q.id) }}" class="btn btn-outline btn-sm">Sửa & Câu hỏi</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-box">Chưa có bài trắc nghiệm nào cho khóa học này.</div>
+  {% endif %}
+</div>
+{% endblock %}

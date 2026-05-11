@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <a href="{{ url_for('communication.course_forum', course_id=course.id) }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại diễn đàn</a>
+    <h1>Thảo luận</h1>
+  </div>
+  {% if current_user.role == 'teacher' and course.teacher_id == current_user.id %}
+    <div class="actions">
+      <form action="{{ url_for('communication.pin_thread', thread_id=thread[0].id) }}" method="post">
+        <button type="submit" class="btn btn-outline">{% if thread[0].is_pinned %}Bỏ ghim{% else %}Ghim chủ đề{% endif %}</button>
+      </form>
+    </div>
+  {% endif %}
+</header>
+
+<!-- Original Post -->
+<div class="card" style="margin-bottom: 32px; border-bottom: 4px solid var(--primary);">
+  <div style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 24px;">
+    <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem;">{{ thread[1].email[0].upper() }}</div>
+    <div>
+      <h2 style="margin-bottom: 4px;">{{ thread[0].title }}</h2>
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        Đăng bởi <strong>{{ thread[1].email.split('@')[0] }}</strong> • {{ thread[0].created_at.strftime('%d/%m/%Y %H:%M') }}
+      </div>
+    </div>
+  </div>
+  <div style="font-size: 1.1rem; line-height: 1.7; white-space: pre-wrap;">{{ thread[0].body }}</div>
+</div>
+
+<!-- Replies -->
+<h3 style="margin-bottom: 24px;">Phản hồi ({{ replies|length }})</h3>
+<div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 40px;">
+  {% for reply, author in replies %}
+    <div class="card" style="background: rgba(255, 255, 255, 0.6);">
+      <div style="display: flex; gap: 16px; align-items: flex-start; margin-bottom: 12px;">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-soft); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem;">{{ author.email[0].upper() }}</div>
+        <div style="font-size: 0.9rem;">
+          <strong>{{ author.email.split('@')[0] }}</strong> 
+          <span style="color: var(--text-muted); margin-left: 8px;">{{ reply.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+        </div>
+      </div>
+      <div style="line-height: 1.6; white-space: pre-wrap;">{{ reply.body }}</div>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Reply Form -->
+<div class="card">
+  <h3 style="margin-bottom: 20px;">Gửi phản hồi</h3>
+  <form action="{{ url_for('communication.create_reply', course_id=course.id, thread_id=thread[0].id) }}" method="post" class="form-group">
+    <div class="form-group">
+      <textarea name="body" rows="4" placeholder="Nhập nội dung phản hồi của bạn..." required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Gửi phản hồi</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <a href="{{ url_for('teacher.manage_courses') }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại khóa học</a>
+    <h1>Quản lý Bài tập: {{ course.title }}</h1>
+  </div>
+  <div class="actions">
+    <a href="{{ url_for('teacher.create_assignment', course_id=course.id) }}" class="btn btn-primary">Tạo Bài tập mới</a>
+  </div>
+</header>
+
+<div class="card">
+  {% if assignments %}
+    <table class="table" style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="text-align: left; border-bottom: 1px solid var(--card-border);">
+          <th style="padding: 12px;">Tiêu đề</th>
+          <th style="padding: 12px;">Hạn nộp</th>
+          <th style="padding: 12px;">Hình thức</th>
+          <th style="padding: 12px;">Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assignments %}
+          <tr style="border-bottom: 1px solid var(--card-border);">
+            <td style="padding: 12px; font-weight: 600;">{{ a.title }}</td>
+            <td style="padding: 12px; color: var(--text-muted);">
+              {{ a.deadline.strftime('%d/%m/%Y %H:%M') if a.deadline else 'Không có' }}
+            </td>
+            <td style="padding: 12px;">
+              <span class="pill">{{ 'File' if a.allow_file }}</span>
+              <span class="pill">{{ 'Văn bản' if a.allow_text }}</span>
+            </td>
+            <td style="padding: 12px;">
+              <a href="{{ url_for('teacher.view_submissions', assignment_id=a.id) }}" class="btn btn-outline btn-sm">Xem bài nộp</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-box">Chưa có bài tập nào cho khóa học này.</div>
+  {% endif %}
+</div>
+{% endblock %}

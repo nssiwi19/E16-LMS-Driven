@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <h1>Cấu hình hệ thống</h1>
+    <p>Thay đổi các thiết lập vận hành của nền tảng.</p>
+  </div>
+</header>
+
+<div class="card" style="max-width: 800px;">
+  <form action="{{ url_for('admin.update_settings') }}" method="post">
+    {% for s in settings %}
+      <div class="form-group" style="margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <label style="margin-bottom: 0; font-weight: 700; color: var(--primary);">{{ s.key }}</label>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Cập nhật: {{ s.updated_at.strftime('%d/%m/%Y %H:%M') }}</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">{{ s.description }}</p>
+        
+        {% if s.value|length > 100 or '\n' in s.value %}
+          <textarea name="{{ s.key }}" rows="3">{{ s.value }}</textarea>
+        {% else %}
+          <input type="text" name="{{ s.key }}" value="{{ s.value }}">
+        {% endif %}
+      </div>
+    {% endfor %}
+    
+    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 16px;">Lưu toàn bộ cấu hình</button>
+  </form>
+</div>
+{% endblock %}

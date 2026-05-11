@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <h1>Quản lý người dùng</h1>
+    <p>Xem và quản lý tất cả tài khoản trong hệ thống.</p>
+  </div>
+</header>
+
+<div class="card">
+  <table class="table" style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr style="text-align: left; border-bottom: 1px solid var(--card-border);">
+        <th style="padding: 12px;">Email</th>
+        <th style="padding: 12px;">Vai trò</th>
+        <th style="padding: 12px;">Ngày tham gia</th>
+        <th style="padding: 12px;">Lần cuối đăng nhập</th>
+        <th style="padding: 12px;">Hành động</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+        <tr style="border-bottom: 1px solid var(--card-border);">
+          <td style="padding: 12px;">
+            <div style="font-weight: 600;">{{ u.email }}</div>
+          </td>
+          <td style="padding: 12px;">
+            <form action="{{ url_for('admin.update_user_role', user_id=u.id) }}" method="post" style="display: flex; gap: 8px; align-items: center;">
+              <select name="role" class="btn btn-outline btn-sm" onchange="this.form.submit()" {% if u.id == current_user.id %}disabled{% endif %}>
+                <option value="student" {% if u.role == 'student' %}selected{% endif %}>Student</option>
+                <option value="teacher" {% if u.role == 'teacher' %}selected{% endif %}>Teacher</option>
+                <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
+              </select>
+            </form>
+          </td>
+          <td style="padding: 12px; color: var(--text-muted);">
+            {{ u.created_at.strftime('%d/%m/%Y') }}
+          </td>
+          <td style="padding: 12px; color: var(--text-muted);">
+            {{ u.last_login.strftime('%d/%m/%Y %H:%M') if u.last_login else 'Chưa đăng nhập' }}
+          </td>
+          <td style="padding: 12px;">
+            {% if u.id != current_user.id %}
+              <form action="{{ url_for('admin.delete_user', user_id=u.id) }}" method="post" style="display: inline;" onsubmit="return confirm('Xác nhận xóa người dùng này? Thao tác này không thể hoàn tác.')">
+                <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
+              </form>
+            {% else %}
+              <span class="badge" style="background: rgba(255,255,255,0.1); color: var(--text-muted);">Self</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

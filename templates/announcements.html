@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <a href="{{ url_for('student.learn', course_id=course.id) if current_user.role == 'student' else url_for('teacher.manage_courses') }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại</a>
+    <h1>Thông báo: {{ course.title }}</h1>
+  </div>
+</header>
+
+{% if current_user.role == 'teacher' and course.teacher_id == current_user.id %}
+<div class="card" style="margin-bottom: 32px;">
+  <h2 style="margin-bottom: 20px;">Đăng thông báo mới</h2>
+  <form action="{{ url_for('communication.create_announcement', course_id=course.id) }}" method="post" class="form-group">
+    <div class="form-group">
+      <label>Tiêu đề</label>
+      <input type="text" name="title" required>
+    </div>
+    <div class="form-group">
+      <label>Nội dung</label>
+      <textarea name="body" rows="4" required></textarea>
+    </div>
+    <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+      <input type="checkbox" name="is_pinned" id="is_pinned">
+      <label for="is_pinned" style="margin-bottom: 0;">Ghim thông báo này</label>
+    </div>
+    <button type="submit" class="btn btn-primary">Đăng thông báo</button>
+  </form>
+</div>
+{% endif %}
+
+<div style="display: flex; flex-direction: column; gap: 20px;">
+  {% if announcements %}
+    {% for ann in announcements %}
+      <div class="card" style="{% if ann.is_pinned %}border-left: 4px solid var(--primary);{% endif %}">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+          <div>
+            <h3 style="margin-bottom: 4px;">{{ ann.title }}</h3>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Đăng bởi Giảng viên • {{ ann.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+          </div>
+          {% if ann.is_pinned %}
+            <span class="pill" style="background: rgba(59, 130, 246, 0.1); color: var(--primary);">📌 Đã ghim</span>
+          {% endif %}
+        </div>
+        <div style="line-height: 1.6; white-space: pre-wrap;">{{ ann.body }}</div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-box">Chưa có thông báo nào cho khóa học này.</div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <a href="{{ url_for('student.learn', course_id=course_id) }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại khóa học</a>
+    <h1>Nộp bài tập: {{ assignment.title }}</h1>
+    {% if assignment.deadline %}
+      <p style="color: var(--danger);">Hạn nộp: {{ assignment.deadline.strftime('%d/%m/%Y %H:%M') }}</p>
+    {% endif %}
+  </div>
+</header>
+
+<div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+  <section>
+    <div class="card">
+      <h2 style="margin-bottom: 16px;">Yêu cầu bài tập</h2>
+      <div style="background: var(--bg-soft); padding: 20px; border-radius: 12px; font-size: 1rem; line-height: 1.6; white-space: pre-wrap;">{{ assignment.description }}</div>
+    </div>
+
+    {% if submission and submission.status == 'graded' %}
+    <div class="card" style="border: 2px solid var(--success); margin-top: 24px;">
+      <h2 style="margin-bottom: 12px;">Kết quả chấm điểm</h2>
+      <div style="font-size: 2rem; font-weight: 800; color: var(--success); margin-bottom: 12px;">{{ submission.score }}/100</div>
+      <div style="font-weight: 600; margin-bottom: 8px;">Nhận xét từ giáo viên:</div>
+      <div style="background: rgba(34, 197, 94, 0.1); padding: 16px; border-radius: 8px; font-style: italic;">{{ submission.feedback or 'Không có nhận xét.' }}</div>
+    </div>
+    {% endif %}
+  </section>
+
+  <section>
+    <div class="card">
+      <h2 style="margin-bottom: 20px;">Bài làm của bạn</h2>
+      <form action="{{ url_for('student.submit_assignment', course_id=course_id, assignment_id=assignment.id) }}" method="post" enctype="multipart/form-data" class="form-group">
+        {% if assignment.allow_text %}
+        <div class="form-group">
+          <label>Nhập nội dung (Văn bản)</label>
+          <textarea name="text_content" rows="10" placeholder="Viết câu trả lời của bạn tại đây..." required>{{ submission.text_content if submission else '' }}</textarea>
+        </div>
+        {% endif %}
+
+        {% if assignment.allow_file %}
+        <div class="form-group">
+          <label>Tải lên file đính kèm</label>
+          <input type="file" name="file" style="padding: 10px; background: var(--bg-soft); border-radius: 8px;">
+          {% if submission and submission.file_path %}
+            <p style="font-size: 0.8rem; margin-top: 8px; color: var(--text-muted);">File hiện tại: <a href="{{ url_for('static', filename=submission.file_path) }}" target="_blank">Xem file</a></p>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">{% if submission %}Cập nhật bài nộp{% else %}Nộp bài tập{% endif %}</button>
+      </form>
+      
+      {% if submission %}
+        <div style="margin-top: 20px; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+          Trạng thái: <strong>{{ 'Đã chấm' if submission.status == 'graded' else 'Chờ chấm' }}</strong><br>
+          Nộp lần cuối: {{ submission.submitted_at.strftime('%d/%m/%Y %H:%M') }}
+        </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

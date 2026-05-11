@@ -7,14 +7,23 @@
         <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại Dashboard</a>
         <h1>{{ selected_lesson.title }}</h1>
       </div>
+      <div style="text-align: right;">
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Tiến độ khóa học: {{ progress|round|int }}%</div>
+        <div class="progress-bar" style="width: 200px; height: 8px;">
+          <div class="progress-fill" style="width: {{ progress }}%;"></div>
+        </div>
+      </div>
+    </header>
+
+    <div style="margin-bottom: 24px; display: flex; justify-content: flex-end;">
       {% if selected_lesson.id not in completed_ids %}
         <form action="{{ url_for('student.mark_complete', course_id=course.id, lesson_id=selected_lesson.id) }}" method="post">
           <button type="submit" class="btn btn-primary">Đánh dấu hoàn thành</button>
         </form>
       {% else %}
-        <span class="btn btn-outline btn-sm" style="color: var(--success); cursor: default;">✓ Đã hoàn thành</span>
+        <span class="btn btn-outline btn-sm" style="color: var(--success); cursor: default; border-color: var(--success);">✓ Đã hoàn thành</span>
       {% endif %}
-    </header>
+    </div>
 
     {% if selected_lesson.video_url %}
     <div class="video-container">
@@ -44,22 +53,66 @@
     </div>
   </div>
 
-  <div class="lesson-sidebar">
-    <h2 style="font-size: 1.1rem; margin-bottom: 16px;">Nội dung khóa học</h2>
-    {% for ls in lessons %}
-      <a href="{{ url_for('student.learn', course_id=course.id, lesson=ls.id) }}" 
-         class="lesson-link {% if ls.id == selected_lesson.id %}active{% endif %} {% if ls.id in completed_ids %}completed{% endif %}">
-        <div class="lesson-icon">
-          {% if ls.id in completed_ids %}✓{% else %}{{ loop.index }}{% endif %}
-        </div>
-        <div style="flex: 1;">
-          <div style="font-size: 0.9rem; font-weight: 500;">{{ ls.title }}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">
-            {% if ls.id in completed_ids %}Hoàn thành{% else %}Chưa học{% endif %}
+    <div class="lesson-sidebar">
+      <h2 style="font-size: 1.1rem; margin-bottom: 16px;">Nội dung khóa học</h2>
+      
+      <div style="margin-bottom: 24px;">
+        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Bài học</h3>
+        {% for ls in lessons %}
+          <a href="{{ url_for('student.learn', course_id=course.id, lesson=ls.id) }}" 
+             class="lesson-link {% if ls.id == selected_lesson.id %}active{% endif %} {% if ls.id in completed_ids %}completed{% endif %}">
+            <div class="lesson-icon">
+              {% if ls.id in completed_ids %}✓{% else %}{{ loop.index }}{% endif %}
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: 0.9rem; font-weight: 500;">{{ ls.title }}</div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+
+      {% if quizzes %}
+      <div style="margin-bottom: 24px;">
+        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Trắc nghiệm</h3>
+        {% for q in quizzes %}
+          <a href="{{ url_for('student.take_quiz', course_id=course.id, quiz_id=q.id) }}" class="lesson-link">
+            <div class="lesson-icon" style="background: var(--primary);">?</div>
+            <div style="flex: 1;">
+              <div style="font-size: 0.9rem; font-weight: 500;">{{ q.title }}</div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if assignments %}
+      <div style="margin-bottom: 24px;">
+        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Bài tập</h3>
+        {% for a in assignments %}
+          <a href="{{ url_for('student.submit_assignment', course_id=course.id, assignment_id=a.id) }}" class="lesson-link">
+            <div class="lesson-icon" style="background: var(--secondary);">!</div>
+            <div style="flex: 1;">
+              <div style="font-size: 0.9rem; font-weight: 500;">{{ a.title }}</div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div style="padding-top: 16px; border-top: 1px solid var(--card-border);">
+        <a href="{{ url_for('communication.list_announcements', course_id=course.id) }}" class="lesson-link">
+          <div class="lesson-icon" style="background: var(--accent);">📢</div>
+          <div style="flex: 1;">
+            <div style="font-size: 0.9rem; font-weight: 600;">Thông báo lớp học</div>
           </div>
-        </div>
-      </a>
-    {% endfor %}
-  </div>
+        </a>
+        <a href="{{ url_for('communication.course_forum', course_id=course.id) }}" class="lesson-link">
+          <div class="lesson-icon" style="background: #8b5cf6;">💬</div>
+          <div style="flex: 1;">
+            <div style="font-size: 0.9rem; font-weight: 600;">Diễn đàn thảo luận</div>
+          </div>
+        </a>
+      </div>
+    </div>
 </div>
 {% endblock %}

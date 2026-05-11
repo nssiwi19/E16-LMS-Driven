@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 40px auto; text-align: center; padding: 40px;">
+  <div style="font-size: 4rem; margin-bottom: 20px;">
+    {% if attempt.passed %}🎉{% else %}❌{% endif %}
+  </div>
+  <h1 style="margin-bottom: 12px;">Kết quả bài làm</h1>
+  <p style="color: var(--text-muted); margin-bottom: 32px;">Quiz: {{ quiz.title }}</p>
+
+  <div style="font-size: 2.5rem; font-weight: 800; color: {% if attempt.passed %}var(--success){% else %}var(--danger){% endif %}; margin-bottom: 8px;">
+    {{ attempt.score }}%
+  </div>
+  <div style="font-weight: 600; margin-bottom: 32px;">
+    {% if attempt.passed %}
+      CHÚC MỪNG! Bạn đã vượt qua bài kiểm tra.
+    {% else %}
+      TIẾC QUÁ! Bạn chưa đạt điểm yêu cầu ({{ quiz.pass_score }}%).
+    {% endif %}
+  </div>
+
+  <div style="display: flex; gap: 16px;">
+    <a href="{{ url_for('student.learn', course_id=course_id) }}" class="btn btn-primary" style="flex: 1;">Quay lại khóa học</a>
+    {% if not attempt.passed %}
+      <a href="{{ url_for('student.take_quiz', course_id=course_id, quiz_id=quiz.id) }}" class="btn btn-outline" style="flex: 1;">Thử lại</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

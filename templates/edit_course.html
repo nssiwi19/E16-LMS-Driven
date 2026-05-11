@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <a href="{{ url_for('teacher.manage_courses') }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại</a>
+    <h1>Sửa khóa học</h1>
+    <p>Cập nhật thông tin chi tiết cho khóa học "{{ course.title }}".</p>
+  </div>
+</header>
+
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+  <form action="{{ url_for('teacher.edit_course', course_id=course.id) }}" method="post" class="form-group">
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Tên khóa học</label>
+        <input type="text" name="title" value="{{ course.title }}" required>
+      </div>
+      <div class="form-group">
+        <label>Danh mục</label>
+        <select name="category_id">
+          <option value="">-- Chưa phân loại --</option>
+          {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if course.category_id == cat.id %}selected{% endif %}>{{ cat.icon }} {{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Mô tả ngắn</label>
+      <textarea name="description" rows="5">{{ course.description }}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Ảnh bìa (URL)</label>
+      <input type="url" name="cover_image_url" value="{{ course.cover_image_url }}">
+    </div>
+    <div style="display: flex; gap: 12px; margin-top: 20px;">
+      <button type="submit" class="btn btn-primary" style="flex: 1;">Lưu thay đổi</button>
+      <a href="{{ url_for('teacher.manage_courses') }}" class="btn btn-outline" style="flex: 1; text-align: center;">Hủy</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

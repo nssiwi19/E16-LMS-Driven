@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <a href="{{ url_for('teacher.manage_assignments', course_id=course.id) }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại</a>
+    <h1>Bài nộp: {{ assignment.title }}</h1>
+  </div>
+  <div class="actions">
+    <a href="{{ url_for('teacher.export_grades', assignment_id=assignment.id) }}" class="btn btn-outline">Xuất điểm CSV</a>
+  </div>
+</header>
+
+<div class="filters-bar" style="margin-bottom: 24px;">
+  <a href="{{ url_for('teacher.view_submissions', assignment_id=assignment.id) }}" class="pill {% if not request.args.get('status') %}active{% endif %}">Tất cả</a>
+  <a href="{{ url_for('teacher.view_submissions', assignment_id=assignment.id, status='pending') }}" class="pill {% if request.args.get('status') == 'pending' %}active{% endif %}">Chờ chấm</a>
+  <a href="{{ url_for('teacher.view_submissions', assignment_id=assignment.id, status='graded') }}" class="pill {% if request.args.get('status') == 'graded' %}active{% endif %}">Đã chấm</a>
+</div>
+
+<div class="card">
+  {% if submissions %}
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+      {% for sub, user in submissions %}
+        <div style="padding: 24px; border: 1px solid var(--card-border); border-radius: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div>
+              <div style="font-weight: 600; font-size: 1.1rem;">{{ user.email }}</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">Nộp lúc: {{ sub.submitted_at.strftime('%d/%m/%Y %H:%M') }}</div>
+            </div>
+            <span class="badge" style="background: {% if sub.status == 'graded' %}rgba(34, 197, 94, 0.2){% else %}rgba(59, 130, 246, 0.2){% endif %}; color: {% if sub.status == 'graded' %}rgb(34, 197, 94){% else %}rgb(59, 130, 246){% endif %};">
+              {{ 'Đã chấm' if sub.status == 'graded' else 'Chờ chấm' }}
+            </span>
+          </div>
+
+          <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+            <div>
+              <h4 style="margin-bottom: 12px;">Nội dung bài nộp</h4>
+              {% if sub.text_content %}
+                <div style="background: var(--bg-soft); padding: 16px; border-radius: 8px; font-size: 0.9rem; white-space: pre-wrap; margin-bottom: 12px;">{{ sub.text_content }}</div>
+              {% endif %}
+              {% if sub.file_path %}
+                <a href="{{ url_for('static', filename=sub.file_path) }}" class="btn btn-outline btn-sm" target="_blank">📄 Tải xuống file bài làm</a>
+              {% endif %}
+            </div>
+
+            <div style="border-left: 1px solid var(--card-border); padding-left: 32px;">
+              <h4 style="margin-bottom: 12px;">Chấm điểm & Nhận xét</h4>
+              <form action="{{ url_for('teacher.grade_submission', submission_id=sub.id) }}" method="post" class="form-group">
+                <div class="form-group">
+                  <label>Điểm (0 - 100)</label>
+                  <input type="number" name="score" value="{{ sub.score or 0 }}" min="0" max="100" required>
+                </div>
+                <div class="form-group">
+                  <label>Nhận xét cho học viên</label>
+                  <textarea name="feedback" rows="3">{{ sub.feedback or '' }}</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Lưu kết quả</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-box">Chưa có bài nộp nào phù hợp với bộ lọc.</div>
+  {% endif %}
+</div>
+{% endblock %}

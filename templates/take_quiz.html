@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <a href="{{ url_for('student.learn', course_id=course_id) }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại khóa học</a>
+    <h1>Làm bài trắc nghiệm: {{ quiz.title }}</h1>
+    <p>Điểm đạt: {{ quiz.pass_score }}% | Lượt làm: {{ quiz.max_attempts }}</p>
+  </div>
+</header>
+
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+  <form action="{{ url_for('student.take_quiz', course_id=course_id, quiz_id=quiz.id) }}" method="post">
+    {% for q in questions %}
+      <div style="margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--card-border);">
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 16px;">{{ loop.index }}. {{ q.text }}</div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          {% for choice in q.choices %}
+            <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--card-border); border-radius: 8px; cursor: pointer;">
+              <input type="radio" name="question_{{ q.id }}" value="{{ choice.id }}" required>
+              <span>{{ choice.text }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="return confirm('Bạn có chắc chắn muốn nộp bài?')">Nộp bài làm</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <h1>Thông báo của bạn</h1>
+    <p>Cập nhật những hoạt động mới nhất liên quan đến bạn.</p>
+  </div>
+  <div class="actions">
+    <form action="{{ url_for('communication.read_all') }}" method="post">
+      <button type="submit" class="btn btn-outline">Đánh dấu tất cả đã đọc</button>
+    </form>
+  </div>
+</header>
+
+<div class="card" style="padding: 0;">
+  {% if notifications %}
+    {% for notif in notifications %}
+      <div style="padding: 20px; border-bottom: 1px solid var(--card-border); display: flex; align-items: center; gap: 20px; {% if not notif.is_read %}background: rgba(59, 130, 246, 0.05);{% endif %}">
+        <div style="width: 12px; height: 12px; border-radius: 50%; background: {% if not notif.is_read %}var(--primary){% else %}var(--card-border){% endif %};"></div>
+        <div style="flex: 1;">
+          <div style="font-weight: 600; margin-bottom: 4px;">{{ notif.message }}</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+        </div>
+        <div style="display: flex; gap: 12px;">
+          {% if notif.link %}
+            <a href="{{ notif.link }}" class="btn btn-outline btn-sm">Xem chi tiết</a>
+          {% endif %}
+          {% if not notif.is_read %}
+            <form action="{{ url_for('communication.mark_read', notif_id=notif.id) }}" method="post">
+              <button type="submit" class="btn btn-primary btn-sm">Đã đọc</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-box">Bạn không có thông báo nào.</div>
+  {% endif %}
+</div>
+{% endblock %}

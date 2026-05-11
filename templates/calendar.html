@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <h1>Lịch học tập & Deadline</h1>
+    <p>Theo dõi các mốc thời gian quan trọng để không bỏ lỡ bài tập.</p>
+  </div>
+</header>
+
+<div class="card" style="max-width: 900px; margin: 0 auto; padding: 0;">
+  {% if deadlines %}
+    {% set current_date = None %}
+    {% for item in deadlines %}
+      {% set item_date = item.deadline.strftime('%d/%m/%Y') %}
+      
+      {% if item_date != current_date %}
+        {% if current_date is not none %}</div>{% endif %}
+        <div style="background: var(--bg-soft); padding: 12px 24px; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--card-border); border-top: 1px solid var(--card-border);">
+          {{ item_date }}
+        </div>
+        <div style="display: flex; flex-direction: column;">
+      {% endif %}
+      
+      {% set current_date = item_date %}
+      
+      <div style="padding: 20px 24px; border-bottom: 1px solid var(--card-border); display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 20px; align-items: center;">
+          <div style="width: 50px; text-align: center;">
+            <div style="font-weight: 800; font-size: 1.2rem;">{{ item.deadline.strftime('%H:%M') }}</div>
+          </div>
+          <div style="width: 2px; height: 30px; background: var(--card-border);"></div>
+          <div>
+            <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">{{ item.title }}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">Khóa học: {{ item.course }}</div>
+          </div>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <span class="pill" style="background: {% if item.type == 'Quiz' %}#fef3c7; color: #92400e;{% else %}#e0e7ff; color: #3730a3;{% endif %}">
+            {{ item.type }}
+          </span>
+          <span class="badge" style="background: {% if item.status in ['graded', 'Đã làm'] %}rgba(34, 197, 94, 0.1); color: var(--success);{% else %}rgba(239, 68, 68, 0.1); color: var(--danger);{% endif %}">
+            {{ item.status }}
+          </span>
+        </div>
+      </div>
+    {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-box">Chưa có deadline nào sắp tới.</div>
+  {% endif %}
+</div>
+{% endblock %}

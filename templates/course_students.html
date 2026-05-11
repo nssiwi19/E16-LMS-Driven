@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <a href="{{ url_for('teacher.manage_courses') }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại</a>
+    <h1>Danh sách học viên</h1>
+    <p>Các học viên đã đăng ký khóa học "{{ course.title }}".</p>
+  </div>
+</header>
+
+<div class="card">
+  {% if enrollments %}
+    <table class="table" style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="text-align: left; border-bottom: 1px solid var(--card-border);">
+          <th style="padding: 12px;">Học viên</th>
+          <th style="padding: 12px;">Ngày đăng ký</th>
+          <th style="padding: 12px;">Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for en, user in enrollments %}
+          <tr style="border-bottom: 1px solid var(--card-border);">
+            <td style="padding: 12px;">
+              <div style="font-weight: 600;">{{ user.email }}</div>
+            </td>
+            <td style="padding: 12px; color: var(--text-muted);">
+              {{ en.enrolled_at.strftime('%d/%m/%Y %H:%M') }}
+            </td>
+            <td style="padding: 12px;">
+              <span class="badge" style="padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; background: {% if en.status == 'completed' %}rgba(34, 197, 94, 0.2){% else %}rgba(59, 130, 246, 0.2){% endif %}; color: {% if en.status == 'completed' %}rgb(34, 197, 94){% else %}rgb(59, 130, 246){% endif %};">
+                {{ en.status }}
+              </span>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-box">Chưa có học viên nào đăng ký khóa học này.</div>
+  {% endif %}
+</div>
+{% endblock %}

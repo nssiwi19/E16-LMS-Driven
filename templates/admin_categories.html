@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <h1>Quản lý Danh mục</h1>
+    <p>Phân loại khóa học để học viên dễ dàng tìm kiếm.</p>
+  </div>
+  <div class="actions">
+    <button onclick="document.getElementById('new-cat-form').style.display='block'" class="btn btn-primary">Thêm danh mục</button>
+  </div>
+</header>
+
+<div id="new-cat-form" class="card" style="display: none; margin-bottom: 32px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2>Danh mục mới</h2>
+    <button onclick="document.getElementById('new-cat-form').style.display='none'" class="btn btn-outline btn-sm">Đóng</button>
+  </div>
+  <form action="{{ url_for('admin.create_category') }}" method="post" class="form-group">
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Tên danh mục</label>
+        <input type="text" name="name" placeholder="Vd: Công nghệ thông tin" required>
+      </div>
+      <div class="form-group">
+        <label>Icon (Emoji hoặc CSS class)</label>
+        <input type="text" name="icon" value="📚">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Mô tả ngắn</label>
+      <input type="text" name="description" placeholder="Mô tả danh mục này...">
+    </div>
+    <button type="submit" class="btn btn-primary">Lưu danh mục</button>
+  </form>
+</div>
+
+<div class="card" style="padding: 0;">
+  <table class="table" style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr style="text-align: left; background: var(--bg-soft); border-bottom: 1px solid var(--card-border);">
+        <th style="padding: 16px;">Icon</th>
+        <th style="padding: 16px;">Tên danh mục</th>
+        <th style="padding: 16px;">Slug</th>
+        <th style="padding: 16px;">Thứ tự</th>
+        <th style="padding: 16px; text-align: right;">Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cat in categories %}
+        <tr style="border-bottom: 1px solid var(--card-border);">
+          <td style="padding: 16px; font-size: 1.5rem;">{{ cat.icon }}</td>
+          <td style="padding: 16px; font-weight: 600;">{{ cat.name }}</td>
+          <td style="padding: 16px; color: var(--text-muted);">{{ cat.slug }}</td>
+          <td style="padding: 16px;">{{ cat.sort_order }}</td>
+          <td style="padding: 16px; text-align: right;">
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+              <button onclick="alert('Tính năng sửa nhanh đang phát triển!')" class="btn btn-outline btn-sm">Sửa</button>
+              <form action="{{ url_for('admin.delete_category', cat_id=cat.id) }}" method="post" onsubmit="return confirm('Xóa danh mục này?')">
+                <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <h1>Nhật ký hệ thống (Audit Log)</h1>
+    <p>Theo dõi mọi hành động quản trị nhạy cảm.</p>
+  </div>
+</header>
+
+<div class="card" style="padding: 0; overflow-x: auto;">
+  <table class="table" style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr style="text-align: left; background: var(--bg-soft); border-bottom: 1px solid var(--card-border);">
+        <th style="padding: 16px;">Thời gian</th>
+        <th style="padding: 16px;">Người thực hiện</th>
+        <th style="padding: 16px;">Hành động</th>
+        <th style="padding: 16px;">Đối tượng</th>
+        <th style="padding: 16px;">Chi tiết</th>
+        <th style="padding: 16px;">IP Address</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log, actor in logs %}
+        <tr style="border-bottom: 1px solid var(--card-border); font-size: 0.9rem;">
+          <td style="padding: 16px; white-space: nowrap;">{{ log.created_at.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+          <td style="padding: 16px;">
+            {% if actor %}
+              <div style="font-weight: 600;">{{ actor.email.split('@')[0] }}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">{{ actor.role }}</div>
+            {% else %}
+              <span style="color: var(--text-muted);">System</span>
+            {% endif %}
+          </td>
+          <td style="padding: 16px;">
+            <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: var(--primary);">{{ log.action }}</span>
+          </td>
+          <td style="padding: 16px;">
+            {% if log.target_type %}
+              {{ log.target_type }} <code style="font-size: 0.7rem;">{{ log.target_id[:8] }}...</code>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td style="padding: 16px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ log.detail }}">
+            {{ log.detail or '—' }}
+          </td>
+          <td style="padding: 16px;">{{ log.ip_address }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <h1>Chứng chỉ của tôi</h1>
+    <p>Thành quả xứng đáng cho sự nỗ lực của bạn.</p>
+  </div>
+</header>
+
+<div class="course-grid">
+  {% for cert, course in certs %}
+    <div class="card" style="text-align: center; padding: 32px;">
+      <div style="font-size: 3rem; margin-bottom: 20px;">🎓</div>
+      <h3 style="margin-bottom: 8px;">{{ course.title }}</h3>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 24px;">Cấp ngày: {{ cert.issued_at.strftime('%d/%m/%Y') }}</p>
+      
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <a href="{{ url_for('student.public_certificate', cert_code=cert.cert_code) }}" class="btn btn-primary btn-sm" target="_blank">Xem chứng chỉ</a>
+        <button class="btn btn-outline btn-sm" onclick="alert('Tính năng tải PDF đang được phát triển!')">Tải PDF</button>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-box" style="grid-column: 1 / -1;">Bạn chưa hoàn thành khóa học nào để nhận chứng chỉ.</div>
+  {% endfor %}
+</div>
+{% endblock %}

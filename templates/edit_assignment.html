@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <a href="{{ url_for('teacher.manage_assignments', course_id=course.id) }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại danh sách</a>
+    <h1>{% if assignment %}Sửa Bài tập{% else %}Tạo Bài tập mới{% endif %}</h1>
+  </div>
+</header>
+
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+  <form action="{{ url_for('teacher.create_assignment', course_id=course.id) }}" method="post" class="form-group">
+    <div class="form-group">
+      <label>Tiêu đề bài tập</label>
+      <input type="text" name="title" value="{{ assignment.title if assignment else '' }}" required>
+    </div>
+    <div class="form-group">
+      <label>Mô tả & Yêu cầu</label>
+      <textarea name="description" rows="6" required>{{ assignment.description if assignment else '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Hạn nộp bài</label>
+      <input type="datetime-local" name="deadline" value="{{ assignment.deadline.strftime('%Y-%m-%dT%H:%M') if assignment and assignment.deadline else '' }}">
+    </div>
+    <div class="form-group">
+      <label>Cấu hình nộp bài</label>
+      <div style="display: flex; gap: 20px;">
+        <label style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" name="allow_file" {% if not assignment or assignment.allow_file %}checked{% endif %}>
+          Cho phép nộp file
+        </label>
+        <label style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" name="allow_text" {% if not assignment or assignment.allow_text %}checked{% endif %}>
+          Cho phép nhập văn bản
+        </label>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Lưu bài tập</button>
+  </form>
+</div>
+{% endblock %}

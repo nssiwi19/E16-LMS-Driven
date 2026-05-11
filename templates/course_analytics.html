@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <a href="{{ url_for('teacher.manage_courses') }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại</a>
+    <h1>Phân tích khóa học: {{ course.title }}</h1>
+  </div>
+</header>
+
+<div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px;">
+  <div class="card stat-card">
+    <div class="stat-value">{{ enrollment_count }}</div>
+    <div class="stat-label">Học viên đăng ký</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-value">{{ completed_count }}</div>
+    <div class="stat-label">Đã hoàn thành</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-value">{% if enrollment_count > 0 %}{{ (completed_count / enrollment_count * 100)|round|int }}%{% else %}0%{% endif %}</div>
+    <div class="stat-label">Tỉ lệ hoàn thành</div>
+  </div>
+</div>
+
+<div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+  <section class="card">
+    <h2 style="margin-bottom: 24px;">Tiến độ học tập (Funnel)</h2>
+    <canvas id="funnelChart"></canvas>
+  </section>
+
+  <section class="card">
+    <h2 style="margin-bottom: 24px;">Điểm Quiz trung bình</h2>
+    <canvas id="quizChart"></canvas>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Funnel Chart
+  const funnelCtx = document.getElementById('funnelChart').getContext('2d');
+  new Chart(funnelCtx, {
+    type: 'bar',
+    data: {
+      labels: {{ funnel_data | map(attribute='title') | list | tojson }},
+      datasets: [{
+        label: 'Số học viên hoàn thành',
+        data: {{ funnel_data | map(attribute='count') | list | tojson }},
+        backgroundColor: 'rgba(37, 99, 235, 0.6)',
+        borderColor: 'rgb(37, 99, 235)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: { beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+
+  // Quiz Chart
+  const quizCtx = document.getElementById('quizChart').getContext('2d');
+  new Chart(quizCtx, {
+    type: 'radar',
+    data: {
+      labels: {{ quiz_stats | map(attribute='title') | list | tojson }},
+      datasets: [{
+        label: 'Điểm trung bình',
+        data: {{ quiz_stats | map(attribute='avg') | list | tojson }},
+        fill: true,
+        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+        borderColor: 'rgb(239, 68, 68)',
+        pointBackgroundColor: 'rgb(239, 68, 68)',
+        pointBorderColor: '#fff',
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: 'rgb(239, 68, 68)'
+      }]
+    },
+    options: {
+      scales: {
+        r: { angleLines: { display: false }, suggestMin: 0, suggestMax: 100 }
+      }
+    }
+  });
+</script>
+{% endblock %}

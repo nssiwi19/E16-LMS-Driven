@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <h1>Học bạ điện tử</h1>
+    <p>Tổng hợp kết quả học tập của bạn qua các khóa học.</p>
+  </div>
+</header>
+
+<div style="display: flex; flex-direction: column; gap: 32px;">
+  {% for data in transcript_data %}
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--card-border);">
+        <h2 style="margin: 0;">{{ data.course.title }}</h2>
+        <div style="text-align: right;">
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Hoàn thành khóa học</div>
+          <div style="font-size: 1.2rem; font-weight: 700; color: var(--primary);">{{ data.completion_rate|round|int }}%</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px;">
+        {% for item in data.items %}
+          <div style="padding: 16px; border: 1px solid var(--card-border); border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">{{ item.type }}</div>
+              <div style="font-weight: 600; font-size: 0.95rem;">{{ item.title }}</div>
+            </div>
+            <div style="text-align: right;">
+              {% if item.score is not none %}
+                <div style="font-weight: 800; font-size: 1.1rem; color: {% if item.type == 'Quiz' %}{% if item.score >= item.pass_score %}var(--success){% else %}var(--danger){% endif %}{% else %}var(--primary){% endif %};">
+                  {{ item.score }}
+                </div>
+              {% else %}
+                <div style="font-size: 0.8rem; color: var(--text-muted);">{{ 'Chưa làm' if item.type == 'Quiz' else 'Chưa nộp' }}</div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-box">Bạn chưa đăng ký khóa học nào.</div>
+  {% endfor %}
+</div>
+{% endblock %}

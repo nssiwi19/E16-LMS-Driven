@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <a href="{{ url_for('teacher.manage_courses') }}" class="btn btn-outline btn-sm" style="margin-bottom: 12px;">&larr; Quay lại</a>
+    <h1>Bảng điểm: {{ course.title }}</h1>
+  </div>
+  <div class="actions">
+    <a href="{{ url_for('teacher.export_gradebook', course_id=course.id) }}" class="btn btn-primary">Xuất CSV toàn bộ</a>
+  </div>
+</header>
+
+<div class="card" style="overflow-x: auto; padding: 0;">
+  <table class="table" style="width: 100%; border-collapse: collapse; min-width: 800px;">
+    <thead>
+      <tr style="text-align: left; background: var(--bg-soft); border-bottom: 2px solid var(--card-border);">
+        <th style="padding: 16px; position: sticky; left: 0; background: var(--bg-soft); z-index: 10;">Học viên</th>
+        {% for q in quizzes %}
+          <th style="padding: 16px; font-size: 0.8rem;">Q: {{ q.title }}</th>
+        {% endfor %}
+        {% for a in assignments %}
+          <th style="padding: 16px; font-size: 0.8rem;">A: {{ a.title }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in students %}
+        <tr style="border-bottom: 1px solid var(--card-border);">
+          <td style="padding: 16px; font-weight: 600; position: sticky; left: 0; background: white; z-index: 5;">
+            {{ s.email.split('@')[0] }}
+            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 400;">{{ s.email }}</div>
+          </td>
+          {% for q in quizzes %}
+            {% set score = scores[s.id]['quiz_' ~ q.id] %}
+            <td style="padding: 16px; text-align: center;">
+              {% if score is not none %}
+                <span style="font-weight: 700; color: {% if score >= q.pass_score %}var(--success){% else %}var(--danger){% endif %};">
+                  {{ score }}
+                </span>
+              {% else %}
+                <span style="color: var(--card-border);">—</span>
+              {% endif %}
+            </td>
+          {% endfor %}
+          {% for a in assignments %}
+            {% set score = scores[s.id]['assign_' ~ a.id] %}
+            <td style="padding: 16px; text-align: center;">
+              {% if score is not none %}
+                <span style="font-weight: 700; color: var(--primary);">{{ score }}</span>
+              {% else %}
+                <span style="color: var(--card-border);">—</span>
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
