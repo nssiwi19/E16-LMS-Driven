@@ -8,6 +8,7 @@
   {% if current_user.role == 'teacher' and course.teacher_id == current_user.id %}
     <div class="actions">
       <form action="{{ url_for('communication.pin_thread', thread_id=thread[0].id) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-outline">{% if thread[0].is_pinned %}Bỏ ghim{% else %}Ghim chủ đề{% endif %}</button>
       </form>
     </div>
@@ -49,6 +50,7 @@
 <div class="card">
   <h3 style="margin-bottom: 20px;">Gửi phản hồi</h3>
   <form action="{{ url_for('communication.create_reply', course_id=course.id, thread_id=thread[0].id) }}" method="post" class="form-group">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
       <textarea name="body" rows="4" placeholder="Nhập nội dung phản hồi của bạn..." required></textarea>
     </div>

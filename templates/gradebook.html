@@ -26,7 +26,7 @@
     <tbody>
       {% for s in students %}
         <tr style="border-bottom: 1px solid var(--card-border);">
-          <td style="padding: 16px; font-weight: 600; position: sticky; left: 0; background: white; z-index: 5;">
+          <td style="padding: 16px; font-weight: 600; position: sticky; left: 0; background: var(--bg-soft); z-index: 5;">
             {{ s.email.split('@')[0] }}
             <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 400;">{{ s.email }}</div>
           </td>

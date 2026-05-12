@@ -41,7 +41,10 @@
               <span>Chứng chỉ</span>
             </a>
           {% elif current_user.role == 'teacher' %}
-            <a href="{{ url_for('teacher.manage_courses') }}" class="nav-item {% if request.blueprint == 'teacher' %}active{% endif %}">
+            <a href="{{ url_for('teacher.dashboard') }}" class="nav-item {% if request.endpoint == 'teacher.dashboard' %}active{% endif %}">
+              <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('teacher.manage_courses') }}" class="nav-item {% if request.endpoint != 'teacher.dashboard' and request.blueprint == 'teacher' %}active{% endif %}">
               <span>Khóa học của tôi</span>
             </a>
           {% elif current_user.role == 'admin' %}

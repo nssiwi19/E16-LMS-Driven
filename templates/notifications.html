@@ -7,6 +7,7 @@
   </div>
   <div class="actions">
     <form action="{{ url_for('communication.read_all') }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-outline">Đánh dấu tất cả đã đọc</button>
     </form>
   </div>
@@ -27,6 +28,7 @@
           {% endif %}
           {% if not notif.is_read %}
             <form action="{{ url_for('communication.mark_read', notif_id=notif.id) }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn btn-primary btn-sm">Đã đọc</button>
             </form>
           {% endif %}

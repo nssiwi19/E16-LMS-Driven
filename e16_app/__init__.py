@@ -9,37 +9,14 @@ def create_app():
     load_dotenv()
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
     
-    # --- SECRET_KEY: crash if not set in production ---
     flask_env = os.getenv("FLASK_ENV", "production")
-    secret = os.getenv("SECRET_KEY")
-    if not secret and flask_env != "development":
-        raise RuntimeError("SECRET_KEY environment variable must be set in production!")
-    app.config["SECRET_KEY"] = secret or "dev-change-me"
-
-    # --- Database ---
-    db_url = os.getenv("DATABASE_URL", "sqlite:///e16.db")
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-    # --- Security: upload limit & session cookies ---
-    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB
-    app.config["SESSION_COOKIE_SECURE"] = os.getenv("SESSION_COOKIE_SECURE", "False") == "True"
-    app.config["SESSION_COOKIE_HTTPONLY"] = True
-    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-
-    # --- Email configuration ---
-    app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER", "smtp.gmail.com")
-    app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", 587))
-    app.config["MAIL_USE_TLS"] = os.getenv("MAIL_USE_TLS", "True") == "True"
-    app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
-    app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
-    app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER", app.config["MAIL_USERNAME"])
-
-    # --- OAuth configuration ---
-    app.config["GOOGLE_CLIENT_ID"] = os.getenv("GOOGLE_CLIENT_ID")
-    app.config["GOOGLE_CLIENT_SECRET"] = os.getenv("GOOGLE_CLIENT_SECRET")
+    if app.config.get("TESTING"):
+        flask_env = "testing"
+        
+    from .config import config_dict
+    app_config = config_dict.get(flask_env, config_dict["default"])
+    app.config.from_object(app_config)
+    app_config.init_app(app)
 
     # --- Initialize extensions ---
     db.init_app(app)
@@ -47,6 +24,13 @@ def create_app():
     csrf.init_app(app)
     login_manager.init_app(app)
     oauth.init_app(app)
+    oauth.register(
+        name="google",
+        client_id=app.config["GOOGLE_CLIENT_ID"],
+        client_secret=app.config["GOOGLE_CLIENT_SECRET"],
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
     mail.init_app(app)
     limiter.init_app(app)
     

@@ -7,11 +7,31 @@ from sqlalchemy import func
 
 from ..auth_utils import login_required, role_required
 from ..extensions import db
-from ..models import Course, Enrollment, Lesson, Quiz, Question, Choice, Assignment, Submission, User
+from ..models import Course, Enrollment, Lesson, Quiz, Question, Choice, Assignment, Submission, User, QuizAttempt
 from ..services.audit import log_action
 
 bp = Blueprint("teacher", __name__, url_prefix="/teacher")
 
+
+@bp.route("/dashboard")
+@login_required
+@role_required("teacher")
+def dashboard():
+    courses = db.session.query(Course).filter(Course.teacher_id == current_user.id).all()
+    total_courses = len(courses)
+    
+    course_ids = [c.id for c in courses]
+    total_students = 0
+    total_lessons = 0
+    if course_ids:
+        total_students = db.session.query(Enrollment).filter(Enrollment.course_id.in_(course_ids)).count()
+        total_lessons = db.session.query(Lesson).filter(Lesson.course_id.in_(course_ids)).count()
+        
+    return render_template("teacher_dashboard.html", 
+                           courses=courses[:5], 
+                           total_courses=total_courses, 
+                           total_students=total_students,
+                           total_lessons=total_lessons)
 
 @bp.route("/manage")
 @login_required
@@ -111,7 +131,23 @@ def course_students(course_id):
         return redirect(url_for("teacher.manage_courses"))
         
     enrollments = db.session.query(Enrollment, User).join(User, User.id == Enrollment.user_id).filter(Enrollment.course_id == course_id).all()
-    return render_template("course_students.html", course=course, enrollments=enrollments)
+    
+    # Tính toán tiến độ từng học viên
+    from ..models import LearningLog, Lesson
+    progress_map = {}
+    if course.total_lessons > 0:
+        for en, u in enrollments:
+            completed = db.session.query(LearningLog).join(Lesson, Lesson.id == LearningLog.lesson_id).filter(
+                LearningLog.user_id == u.id,
+                LearningLog.action_type == "complete",
+                Lesson.course_id == course_id
+            ).count()
+            progress_map[u.id] = int((completed / course.total_lessons) * 100)
+    else:
+        for en, u in enrollments:
+            progress_map[u.id] = 0
+            
+    return render_template("course_students.html", course=course, enrollments=enrollments, progress_map=progress_map)
 
 
 @bp.route("/courses/<course_id>/lessons")

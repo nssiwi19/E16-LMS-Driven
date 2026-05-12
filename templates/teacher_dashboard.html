@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <h1>Tổng quan Giảng dạy</h1>
+    <p style="color: var(--text-muted);">Chào mừng trở lại, hãy xem qua tiến độ các khóa học của bạn.</p>
+  </div>
+  <a href="{{ url_for('teacher.create_course') }}" class="btn btn-primary" onclick="event.preventDefault(); document.getElementById('quick-create-form').submit();">
+    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+    Tạo khóa học nhanh
+  </a>
+  <form id="quick-create-form" action="{{ url_for('teacher.create_course') }}" method="post" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="title" value="Khóa học mới">
+  </form>
+</header>
+
+<div class="stats-grid">
+  <div class="card stat-card" style="border-top: 4px solid var(--primary);">
+    <div class="stat-value">{{ total_courses }}</div>
+    <div class="stat-label">Tổng số Khóa học</div>
+  </div>
+  <div class="card stat-card" style="border-top: 4px solid var(--success);">
+    <div class="stat-value">{{ total_students }}</div>
+    <div class="stat-label">Học viên Đăng ký</div>
+  </div>
+  <div class="card stat-card" style="border-top: 4px solid var(--warning);">
+    <div class="stat-value">{{ total_lessons }}</div>
+    <div class="stat-label">Bài giảng đã tạo</div>
+  </div>
+</div>
+
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2>Khóa học gần đây</h2>
+    <a href="{{ url_for('teacher.manage_courses') }}" class="btn btn-outline btn-sm">Xem tất cả</a>
+  </div>
+  
+  {% if courses %}
+  <div style="overflow-x: auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Tên khóa học</th>
+          <th>Trạng thái</th>
+          <th>Danh mục</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for course in courses %}
+        <tr>
+          <td style="font-weight: 500;">{{ course.title }}</td>
+          <td>
+            <span style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; 
+                  background: {% if course.status == 'published' %}rgba(16, 185, 129, 0.2); color: var(--success);{% else %}rgba(245, 158, 11, 0.2); color: var(--warning);{% endif %}">
+              {{ course.status | upper }}
+            </span>
+          </td>
+          <td style="color: var(--text-muted);">{{ course.category.name if course.category else 'Chưa có' }}</td>
+          <td>
+            <a href="{{ url_for('teacher.edit_course', course_id=course.id) }}" class="btn btn-outline btn-sm">Sửa</a>
+            <a href="{{ url_for('teacher.manage_lessons', course_id=course.id) }}" class="btn btn-outline btn-sm">Bài giảng</a>
+            <a href="{{ url_for('teacher.course_students', course_id=course.id) }}" class="btn btn-outline btn-sm">Học viên</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p style="color: var(--text-muted); text-align: center; padding: 40px 0;">Bạn chưa có khóa học nào. Hãy bắt đầu tạo khóa học đầu tiên!</p>
+  {% endif %}
+</div>
+{% endblock %}

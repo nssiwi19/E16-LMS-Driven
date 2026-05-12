@@ -18,6 +18,7 @@
     <div style="margin-bottom: 24px; display: flex; justify-content: flex-end;">
       {% if selected_lesson.id not in completed_ids %}
         <form action="{{ url_for('student.mark_complete', course_id=course.id, lesson_id=selected_lesson.id) }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-primary">Đánh dấu hoàn thành</button>
         </form>
       {% else %}

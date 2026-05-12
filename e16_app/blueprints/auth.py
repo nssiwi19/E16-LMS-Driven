@@ -18,24 +18,42 @@ def _utcnow():
     return datetime.now(timezone.utc)
 
 
-@bp.route("/login/google")
-def google_login():
-    redirect_uri = url_for("auth.google_authorize", _external=True)
-    return oauth.google.authorize_redirect(redirect_uri)
+@bp.route("/login/<name>")
+def oauth_login(name):
+    client = oauth.create_client(name)
+    if not client:
+        return redirect(url_for("auth.login"))
+    redirect_uri = url_for("auth.oauth_authorize", name=name, _external=True)
+    return client.authorize_redirect(redirect_uri)
 
 
-@bp.route("/login/google/authorize")
-def google_authorize():
-    token = oauth.google.authorize_access_token()
+@bp.route("/authorize/<name>")
+def oauth_authorize(name):
+    client = oauth.create_client(name)
+    if not client:
+        return redirect(url_for("auth.login"))
+    
+    try:
+        token = client.authorize_access_token()
+    except Exception as e:
+        current_app.logger.error(f"OAuth error: {str(e)}")
+        flash("Đăng nhập thất bại. Vui lòng thử lại.", "error")
+        return redirect(url_for("auth.login"))
+
     user_info = token.get("userinfo")
     if not user_info:
-        flash("Không thể lấy thông tin từ Google.", "error")
+        # Fallback for non-OIDC or if userinfo not in token
+        user_info = client.get("userinfo").json()
+        
+    if not user_info or not user_info.get("email"):
+        flash("Không thể lấy thông tin email từ nhà cung cấp.", "error")
         return redirect(url_for("auth.login"))
 
     email = user_info["email"].lower()
     user = db.session.query(User).filter(User.email == email).first()
 
     if not user:
+        # Tự động tạo tài khoản nếu chưa có
         user = User(
             email=email,
             password_hash=generate_password_hash(secrets.token_urlsafe(16)),
@@ -49,7 +67,7 @@ def google_authorize():
     db.session.commit()
 
     login_user(user)
-    logger.log("login_google", user_id=user.id, user_email=user.email, metadata={"method": "google"})
+    logger.log(f"login_oauth_{name}", user_id=user.id, user_email=user.email, metadata={"method": name})
     flash(f"Chào mừng {email}!", "success")
     return redirect(url_for("auth.home"))
 
@@ -61,18 +79,19 @@ def home():
     if current_user.role == "student":
         return redirect(url_for("student.dashboard"))
     if current_user.role == "teacher":
-        return redirect(url_for("teacher.manage_courses"))
+        return redirect(url_for("teacher.dashboard"))
     return redirect(url_for("analytics.dashboard"))
 
 
 @bp.route("/register", methods=["GET", "POST"])
-@limiter.limit("5 per minute")
+@limiter.limit("15 per minute")
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("auth.home"))
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
+        phone = request.form.get("phone", "").strip()
         role = request.form.get("role", "student")
         # Security: chỉ cho phép student hoặc teacher tự đăng ký
         if role not in {"student", "teacher"}:
@@ -86,7 +105,7 @@ def register():
         if db.session.query(User).filter(User.email == email).first():
             flash("Email đã tồn tại.", "error")
             return redirect(url_for("auth.register"))
-        user = User(email=email, password_hash=generate_password_hash(password), role=role)
+        user = User(email=email, password_hash=generate_password_hash(password), role=role, phone=phone)
         db.session.add(user)
         db.session.commit()
         logger.log("register", user_id=user.id, user_email=user.email, metadata={"role": role})
@@ -96,7 +115,7 @@ def register():
 
 
 @bp.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute")
+@limiter.limit("15 per minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("auth.home"))
@@ -106,6 +125,9 @@ def login():
         user = db.session.query(User).filter(User.email == email).first()
         if not user or not check_password_hash(user.password_hash, password):
             flash("Email hoặc mật khẩu không chính xác.", "error")
+            return redirect(url_for("auth.login"))
+        if not user.is_active:
+            flash("Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ Admin.", "error")
             return redirect(url_for("auth.login"))
         user.last_login = _utcnow()
         user.login_count = (user.login_count or 0) + 1
@@ -190,16 +212,6 @@ def reset_password(token):
     return render_template("reset_password.html", token=token, user=None)
 
 
-# --- Seed ---
-
-@bp.route("/seed")
-def seed():
-    seed_password = os.getenv("E16_SEED_PASSWORD", "demo-password")
-    request_key = request.args.get("key")
-    if request_key != seed_password:
-        return "Unauthorized: Invalid seed key.", 403
-    return _run_seed(seed_password)
-
 
 def _run_seed(seed_password):
     """Core seed logic — shared between HTTP route and CLI command."""
@@ -223,25 +235,31 @@ def _run_seed(seed_password):
             db.session.commit()
         categories[slug] = cat
 
-    students = []
-    for i in range(1, 6):
-        email = f"student{i}@e16.local"
-        if not db.session.query(User).filter(User.email == email).first():
-            s = User(email=email, password_hash=generate_password_hash(seed_password), role="student")
-            students.append(s)
-    if students:
-        db.session.add_all(students)
-        db.session.commit()
-
-    teacher = db.session.query(User).filter_by(email="teacher@e16.local").first()
-    if not teacher:
-        teacher = User(email="teacher@e16.local", password_hash=generate_password_hash(seed_password), role="teacher")
-        db.session.add(teacher)
+    # 1. Create Core Test Users (User Request)
+    core_users = [
+        ("admin@gmail.com", "admine16", "admin"),
+        ("teacher@gmail.com", "teachere16", "teacher"),
+        ("student@gmail.com", "studente16", "student")
+    ]
     
-    admin = db.session.query(User).filter_by(email="admin@e16.local").first()
-    if not admin:
-        admin = User(email="admin@e16.local", password_hash=generate_password_hash(seed_password), role="admin")
-        db.session.add(admin)
+    teacher = None
+    for email, pwd, role in core_users:
+        u = db.session.query(User).filter_by(email=email).first()
+        if not u:
+            u = User(email=email, password_hash=generate_password_hash(pwd), role=role)
+            db.session.add(u)
+        else:
+            # Force the correct role if user already exists
+            u.role = role
+        db.session.commit()
+        if role == "teacher":
+            teacher = u
+
+    # 2. Extra students for variety
+    for i in range(1, 4):
+        email = f"student{i}@e16.local"
+        if not db.session.query(User).filter_by(email=email).first():
+            db.session.add(User(email=email, password_hash=generate_password_hash(seed_password), role="student"))
     db.session.commit()
 
     course_data = [

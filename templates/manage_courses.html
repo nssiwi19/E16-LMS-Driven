@@ -53,6 +53,7 @@
 
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <a href="{{ url_for('teacher.manage_lessons', course_id=course.id) }}" class="btn btn-outline btn-sm">Nội dung</a>
+              <a href="{{ url_for('teacher.course_students', course_id=course.id) }}" class="btn btn-outline btn-sm">Học viên</a>
               <a href="{{ url_for('teacher.manage_quizzes', course_id=course.id) }}" class="btn btn-outline btn-sm">Quizzes</a>
               <a href="{{ url_for('teacher.manage_assignments', course_id=course.id) }}" class="btn btn-outline btn-sm">Bài tập</a>
               <a href="{{ url_for('teacher.view_gradebook', course_id=course.id) }}" class="btn btn-outline btn-sm">Sổ điểm</a>

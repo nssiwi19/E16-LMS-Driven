@@ -26,6 +26,7 @@
           </td>
           <td style="padding: 12px;">
             <form action="{{ url_for('admin.update_user_role', user_id=u.id) }}" method="post" style="display: flex; gap: 8px; align-items: center;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <select name="role" class="btn btn-outline btn-sm" onchange="this.form.submit()" {% if u.id == current_user.id %}disabled{% endif %}>
                 <option value="student" {% if u.role == 'student' %}selected{% endif %}>Student</option>
                 <option value="teacher" {% if u.role == 'teacher' %}selected{% endif %}>Teacher</option>
@@ -42,7 +43,14 @@
           <td style="padding: 12px;">
             {% if u.id != current_user.id %}
               <form action="{{ url_for('admin.delete_user', user_id=u.id) }}" method="post" style="display: inline;" onsubmit="return confirm('Xác nhận xóa người dùng này? Thao tác này không thể hoàn tác.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
+              </form>
+              <form action="{{ url_for('admin.toggle_user_status', user_id=u.id) }}" method="post" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline btn-sm">
+                  {% if u.is_active %}Vô hiệu hóa{% else %}Kích hoạt{% endif %}
+                </button>
               </form>
             {% else %}
               <span class="badge" style="background: rgba(255,255,255,0.1); color: var(--text-muted);">Self</span>

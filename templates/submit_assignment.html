@@ -31,6 +31,7 @@
     <div class="card">
       <h2 style="margin-bottom: 20px;">Bài làm của bạn</h2>
       <form action="{{ url_for('student.submit_assignment', course_id=course_id, assignment_id=assignment.id) }}" method="post" enctype="multipart/form-data" class="form-group">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% if assignment.allow_text %}
         <div class="form-group">
           <label>Nhập nội dung (Văn bản)</label>

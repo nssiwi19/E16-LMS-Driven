@@ -16,6 +16,7 @@
     <button onclick="document.getElementById('new-thread-form').style.display='none'" class="btn btn-outline btn-sm">Đóng</button>
   </div>
   <form action="{{ url_for('communication.create_thread', course_id=course.id) }}" method="post" class="form-group">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
       <label>Tiêu đề</label>
       <input type="text" name="title" placeholder="Vấn đề bạn đang gặp phải là gì?" required>

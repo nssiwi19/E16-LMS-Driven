@@ -10,6 +10,7 @@
 
 <div class="card" style="max-width: 600px; margin: 0 auto;">
   <form action="{{ url_for('teacher.edit_course', course_id=course.id) }}" method="post" class="form-group">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="grid-2">
       <div class="form-group">
         <label>Tên khóa học</label>

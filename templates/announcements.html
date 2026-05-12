@@ -11,6 +11,7 @@
 <div class="card" style="margin-bottom: 32px;">
   <h2 style="margin-bottom: 20px;">Đăng thông báo mới</h2>
   <form action="{{ url_for('communication.create_announcement', course_id=course.id) }}" method="post" class="form-group">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
       <label>Tiêu đề</label>
       <input type="text" name="title" required>

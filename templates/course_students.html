@@ -14,7 +14,9 @@
       <thead>
         <tr style="text-align: left; border-bottom: 1px solid var(--card-border);">
           <th style="padding: 12px;">Học viên</th>
+          <th style="padding: 12px;">Số điện thoại</th>
           <th style="padding: 12px;">Ngày đăng ký</th>
+          <th style="padding: 12px;">Tiến độ</th>
           <th style="padding: 12px;">Trạng thái</th>
         </tr>
       </thead>
@@ -23,9 +25,21 @@
           <tr style="border-bottom: 1px solid var(--card-border);">
             <td style="padding: 12px;">
               <div style="font-weight: 600;">{{ user.email }}</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">ID: {{ user.id.split('-')[0] }}...</div>
+            </td>
+            <td style="padding: 12px;">
+              {{ user.phone if user.phone else 'Chưa cập nhật' }}
             </td>
             <td style="padding: 12px; color: var(--text-muted);">
               {{ en.enrolled_at.strftime('%d/%m/%Y %H:%M') }}
+            </td>
+            <td style="padding: 12px; min-width: 150px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="progress-bar" style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                  <div class="progress-fill" style="width: {{ progress_map[user.id] }}%; height: 100%; background: var(--primary);"></div>
+                </div>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">{{ progress_map[user.id] }}%</span>
+              </div>
             </td>
             <td style="padding: 12px;">
               <span class="badge" style="padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; background: {% if en.status == 'completed' %}rgba(34, 197, 94, 0.2){% else %}rgba(59, 130, 246, 0.2){% endif %}; color: {% if en.status == 'completed' %}rgb(34, 197, 94){% else %}rgb(59, 130, 246){% endif %};">

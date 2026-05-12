@@ -67,6 +67,23 @@ def delete_user(user_id):
         flash(f"Đã xóa người dùng {email}.", "success")
     return redirect(url_for("admin.list_users"))
 
+@bp.post("/users/<user_id>/toggle_status")
+@login_required
+@role_required("admin")
+def toggle_user_status(user_id):
+    if user_id == current_user.id:
+        flash("Bạn không thể tự vô hiệu hóa tài khoản của chính mình.", "error")
+        return redirect(url_for("admin.list_users"))
+        
+    user = db.session.get(User, user_id)
+    if user:
+        user.is_active = not user.is_active
+        db.session.commit()
+        status_str = "kích hoạt" if user.is_active else "vô hiệu hóa"
+        flash(f"Đã {status_str} tài khoản {user.email}.", "success")
+        log_action("user_status_changed", "User", user_id, {"new_status": user.is_active})
+    return redirect(url_for("admin.list_users"))
+
 # --- Category Management ---
 
 @bp.route("/categories")
@@ -305,9 +322,9 @@ def seed_system():
     # Seed Users
     from werkzeug.security import generate_password_hash
     users = [
-        {"email": "admin@e16.edu.vn", "password_hash": generate_password_hash("admin123"), "role": "admin"},
-        {"email": "teacher@e16.edu.vn", "password_hash": generate_password_hash("teacher123"), "role": "teacher"},
-        {"email": "student@e16.edu.vn", "password_hash": generate_password_hash("student123"), "role": "student"}
+        {"email": "admin@gmail.com", "password_hash": generate_password_hash("admine16"), "role": "admin"},
+        {"email": "teacher@gmail.com", "password_hash": generate_password_hash("teachere16"), "role": "teacher"},
+        {"email": "student@gmail.com", "password_hash": generate_password_hash("studente16"), "role": "student"}
     ]
     for u_data in users:
         if not db.session.query(User).filter_by(email=u_data["email"]).first():

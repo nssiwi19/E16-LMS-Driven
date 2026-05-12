@@ -9,6 +9,7 @@
 
 <div class="card" style="max-width: 800px; margin: 0 auto;">
   <form action="{{ url_for('teacher.create_assignment', course_id=course.id) }}" method="post" class="form-group">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
       <label>Tiêu đề bài tập</label>
       <input type="text" name="title" value="{{ assignment.title if assignment else '' }}" required>
