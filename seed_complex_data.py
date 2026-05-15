@@ -110,9 +110,16 @@ def run_complex_seed():
             for sc in random.sample(all_courses, random.randint(3, 8)):
                 eid = new_uuid()
                 status = random.choice(["active", "completed"])
-                enroll = Enrollment(id=eid, user_id=student.id, course_id=sc.id, status=status)
+                # Random ngày đăng ký trong 90 ngày qua
+                enroll_days_ago = random.randint(0, 90)
+                enroll_time = datetime.now(timezone.utc) - timedelta(days=enroll_days_ago)
+                
+                enroll = Enrollment(id=eid, user_id=student.id, course_id=sc.id, status=status, enrolled_at=enroll_time)
                 db.session.add(enroll)
-                sb_enrollments.append({"id": eid, "user_id": student.id, "course_id": sc.id, "status": status, "enrolled_at": datetime.now(timezone.utc).isoformat()})
+                sb_enrollments.append({
+                    "id": eid, "user_id": student.id, "course_id": sc.id, 
+                    "status": status, "enrolled_at": enroll_time.isoformat()
+                })
                 
                 for quiz in [q for q in sb_quizzes if q["course_id"] == sc.id]:
                     score = random.randint(40, 100)
@@ -183,6 +190,38 @@ def run_complex_seed():
                 push_batch("enrollments", sb_enrollments)
                 print("Đẩy Quiz Attempts...")
                 push_batch("quiz_attempts", sb_quiz_attempts)
+
+                # 4. Tạo Learning Logs giả lập để có dữ liệu "is_started"
+                print("Tạo và đẩy Learning Logs...")
+                sb_logs = []
+                for student in students:
+                    # Lấy các enrollment của student này
+                    student_enrolls = [e for e in sb_enrollments if e["user_id"] == student.id]
+                    for enroll in student_enrolls:
+                        # Lấy 1 vài lesson của khóa học này để tạo log
+                        course_lessons = [l for l in sb_lessons if l["course_id"] == enroll["course_id"]]
+                        if course_lessons:
+                            sampled_lessons = random.sample(course_lessons, random.randint(1, min(3, len(course_lessons))))
+                            for lesson in sampled_lessons:
+                                log_id = new_uuid()
+                                # Log time phải sau ngày enroll
+                                enroll_dt = datetime.fromisoformat(enroll["enrolled_at"])
+                                # Tính số ngày từ lúc enroll đến nay
+                                days_since_enroll = (datetime.now(timezone.utc) - enroll_dt).days
+                                log_days_after = random.randint(0, max(0, days_since_enroll))
+                                log_time = enroll_dt + timedelta(days=log_days_after, hours=random.randint(0, 23))
+                                
+                                sb_logs.append({
+                                    "log_id": log_id,
+                                    "user_id": student.id,
+                                    "lesson_id": lesson["id"],
+                                    "action_type": random.choice(["view_video", "start_lesson"]),
+                                    "timestamp": log_time.isoformat()
+                                })
+                
+                if sb_logs:
+                    push_batch("learning_logs", sb_logs)
+
                 print("Đồng bộ Supabase thành công!")
             except Exception as e:
                 print(f"Lỗi khi đồng bộ Supabase: {e}")
