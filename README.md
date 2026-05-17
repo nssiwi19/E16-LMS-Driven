@@ -77,4 +77,24 @@ Hệ thống có nhiều script seed khác nhau phục vụ các kịch bản ki
 
 ---
 
+## ⚠️ Lưu ý về Tương thích Phiên bản Python (Troubleshooting)
+
+Một số thư viện lõi của hệ thống (như **SQLAlchemy v2.0.23** và **Flask-Migrate / Alembic**) có thể gặp lỗi không tương thích trong quá trình import/khởi tạo nếu dự án được chạy bằng các phiên bản Python quá mới như **Python 3.14.x** (phiên bản pre-release hoặc đang thử nghiệm).
+
+### 🛠️ Hướng khắc phục đề xuất:
+1. **Sử dụng phiên bản Python Khuyến nghị**: Khuyến khích sử dụng **Python 3.11** hoặc **Python 3.12** để đảm bảo tính ổn định và tương thích tuyệt đối cho môi trường kiểm thử và vận hành.
+2. **Sử dụng Môi trường ảo (Virtual Environment) chỉ định phiên bản**:
+   ```powershell
+   # Tạo môi trường ảo với Python 3.12 (nếu máy có sẵn nhiều phiên bản)
+   py -3.12 -m venv venv
+   
+   # Kích hoạt môi trường ảo
+   .\venv\Scripts\Activate.ps1
+   
+   # Cài đặt lại thư viện
+   pip install -r requirements.txt
+   ```
+
+---
+
 © 2024 E16 Education Team. All rights reserved.
