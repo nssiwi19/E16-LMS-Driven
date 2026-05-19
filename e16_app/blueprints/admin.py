@@ -5,7 +5,6 @@ import re
 import random
 import string
 import os
-from datetime import datetime
 from flask import Blueprint, flash, redirect, render_template, request, url_for, make_response, current_app
 from flask_login import current_user
 from sqlalchemy import func
@@ -13,8 +12,10 @@ from sqlalchemy import func
 from ..auth_utils import login_required, role_required
 from ..extensions import db
 from ..models import User, Category, Course, SystemSetting, AuditLog, Enrollment
+from ..pagination import get_pagination, paginate_query
 from ..services.audit import log_action
 from ..services.settings import flush_settings_cache
+from ..time_utils import utcnow
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -31,8 +32,35 @@ def slugify(text):
 @login_required
 @role_required("admin")
 def list_users():
-    users = db.session.query(User).order_by(User.created_at.desc()).all()
-    return render_template("admin_users.html", users=users)
+    page, per_page = get_pagination()
+    sort_by = request.args.get("sort_by", "created_at")
+    order = request.args.get("order", "desc")
+    
+    query = db.session.query(User)
+    
+    # Map sort column safely
+    if sort_by == "role":
+        col = User.role
+    elif sort_by == "last_login":
+        col = User.last_login
+    else:
+        sort_by = "created_at"
+        col = User.created_at
+        
+    if order == "asc":
+        query = query.order_by(col.asc())
+    else:
+        order = "desc"
+        query = query.order_by(col.desc())
+        
+    pagination = paginate_query(query, page, per_page)
+    return render_template(
+        "admin_users.html", 
+        users=pagination["items"], 
+        pagination=pagination, 
+        sort_by=sort_by, 
+        order=order
+    )
 
 @bp.post("/users/<user_id>/update_role")
 @login_required
@@ -61,10 +89,12 @@ def delete_user(user_id):
     user = db.session.get(User, user_id)
     if user:
         email = user.email
-        db.session.delete(user)
+        user.is_active = False
+        user.reset_token = None
+        user.reset_token_expiry = None
         db.session.commit()
-        log_action("user_deleted", "User", user_id, {"email": email})
-        flash(f"Đã xóa người dùng {email}.", "success")
+        log_action("user_soft_deleted", "User", user_id, {"email": email})
+        flash(f"Đã vô hiệu hóa người dùng {email}.", "success")
     return redirect(url_for("admin.list_users"))
 
 @bp.post("/users/<user_id>/toggle_status")
@@ -135,7 +165,7 @@ def edit_category(cat_id):
 @role_required("admin")
 def delete_category(cat_id):
     # Check if any course is using it
-    course_count = db.session.query(Course).filter_by(category_id=cat_id).count()
+    course_count = db.session.query(Course).filter_by(category_id=cat_id, is_deleted=False).count()
     if course_count > 0:
         flash(f"Không thể xóa danh mục này vì đang có {course_count} khóa học sử dụng.", "error")
         return redirect(url_for("admin.list_categories"))
@@ -177,8 +207,10 @@ def update_settings():
 @login_required
 @role_required("admin")
 def view_audit_log():
-    logs = db.session.query(AuditLog, User).outerjoin(User, User.id == AuditLog.actor_id).order_by(AuditLog.created_at.desc()).limit(200).all()
-    return render_template("admin_audit_log.html", logs=logs)
+    page, per_page = get_pagination(default_per_page=50, max_per_page=200)
+    query = db.session.query(AuditLog, User).outerjoin(User, User.id == AuditLog.actor_id).order_by(AuditLog.created_at.desc())
+    pagination = paginate_query(query, page, per_page)
+    return render_template("admin_audit_log.html", logs=pagination["items"], pagination=pagination)
 
 # --- User Import (Phase 2) ---
 
@@ -196,23 +228,52 @@ def import_users():
     if not file or not file.filename.endswith('.csv'):
         flash("Vui lòng tải lên file CSV hợp lệ.", "error")
         return redirect(url_for("admin.import_users_view"))
-        
-    stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+
+    raw = file.stream.read()
+    max_import_size = int(os.getenv("CSV_IMPORT_MAX_BYTES", str(5 * 1024 * 1024)))
+    if len(raw) > max_import_size:
+        flash("File CSV vượt quá dung lượng cho phép.", "error")
+        return redirect(url_for("admin.import_users_view"))
+
+    try:
+        stream = io.StringIO(raw.decode("utf-8-sig"), newline=None)
+    except UnicodeDecodeError:
+        flash("File CSV phải dùng encoding UTF-8.", "error")
+        return redirect(url_for("admin.import_users_view"))
+
     csv_input = csv.DictReader(stream)
+    required_headers = {"email", "role"}
+    headers = {h.strip() for h in (csv_input.fieldnames or []) if h}
+    if not required_headers.issubset(headers):
+        flash("CSV phải có header bắt buộc: email, role.", "error")
+        return redirect(url_for("admin.import_users_view"))
     
     success_count = 0
     error_count = 0
     results = []
+    max_rows = int(os.getenv("CSV_IMPORT_MAX_ROWS", "5000"))
     
     from werkzeug.security import generate_password_hash
     
-    for row in csv_input:
-        email = row.get("email")
-        role = row.get("role", "student")
+    for index, row in enumerate(csv_input, start=1):
+        if index > max_rows:
+            error_count += 1
+            results.append({"email": "", "status": "Lỗi", "reason": f"CSV vượt quá giới hạn {max_rows} dòng"})
+            break
+
+        email = (row.get("email") or "").strip().lower()
+        role = (row.get("role") or "student").strip().lower()
+        phone = (row.get("phone") or "").strip() or None
+        is_active_raw = (row.get("is_active") or "true").strip().lower()
         
         if not email or "@" not in email:
             error_count += 1
             results.append({"email": email, "status": "Lỗi", "reason": "Email không hợp lệ"})
+            continue
+
+        if role not in {"student", "teacher", "admin"}:
+            error_count += 1
+            results.append({"email": email, "status": "Lỗi", "reason": "Role không hợp lệ"})
             continue
             
         exists = db.session.query(User).filter_by(email=email).first()
@@ -227,7 +288,9 @@ def import_users():
         user = User(
             email=email,
             password_hash=generate_password_hash(temp_pass),
-            role=role
+            role=role,
+            phone=phone,
+            is_active=is_active_raw not in {"false", "0", "no", "inactive"}
         )
         db.session.add(user)
         success_count += 1
@@ -245,7 +308,10 @@ def import_users():
 @login_required
 @role_required("admin")
 def pending_courses():
-    courses = db.session.query(Course, User).join(User, User.id == Course.teacher_id).filter(Course.status == "pending_review").all()
+    courses = db.session.query(Course, User).join(User, User.id == Course.teacher_id).filter(
+        Course.status == "pending_review",
+        Course.is_deleted == False,
+    ).all()
     return render_template("admin_pending_courses.html", courses=courses)
 
 @bp.post("/courses/<course_id>/approve")
@@ -253,9 +319,9 @@ def pending_courses():
 @role_required("admin")
 def approve_course(course_id):
     course = db.session.get(Course, course_id)
-    if course:
+    if course and not course.is_deleted:
         course.status = "published"
-        course.published_at = datetime.utcnow()
+        course.published_at = utcnow()
         db.session.commit()
         
         from ..services.notifications import notify
@@ -270,7 +336,7 @@ def approve_course(course_id):
 def reject_course(course_id):
     course = db.session.get(Course, course_id)
     note = request.form.get("rejection_note")
-    if course:
+    if course and not course.is_deleted:
         course.status = "rejected"
         course.rejection_note = note
         db.session.commit()
@@ -283,6 +349,11 @@ def reject_course(course_id):
 
 @bp.route("/seed")
 def seed_system():
+    # Security: Only allow seeding in development. Check this before any auth/data logic.
+    app_env = os.getenv("APP_ENV", os.getenv("FLASK_ENV", "production")).lower()
+    if app_env != "development":
+        return "Forbidden: This action is only allowed in development environment.", 403
+
     # Allow seeding without login ONLY if no users exist in the DB
     user_count = db.session.query(User).count()
     if user_count > 0:
@@ -292,12 +363,6 @@ def seed_system():
             flash("Bạn cần quyền Admin để chạy lại lệnh Seed.", "error")
             return redirect(url_for("auth.login"))
 
-    # Security: Only allow seeding in development
-    app_env = os.getenv("APP_ENV", os.getenv("FLASK_ENV", "production")).lower()
-    if app_env != "development":
-        flash("Tính năng khởi tạo dữ liệu chỉ khả dụng trong môi trường Development.", "error")
-        return "Forbidden: This action is only allowed in development environment.", 403
-        
     # Seed Categories
     cats = [
         {"name": "Công nghệ thông tin", "slug": "it", "icon": "💻", "sort_order": 1},

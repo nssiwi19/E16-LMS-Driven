@@ -3,103 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chứng chỉ Hoàn thành - {{ user.email.split('@')[0] }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #2563eb;
-            --gold: #d4af37;
-        }
-        body {
-            margin: 0;
-            padding: 40px;
-            background: #f1f5f9;
-            font-family: 'Inter', sans-serif;
-            display: flex;
-            justify-content: center;
-        }
-        .certificate-container {
-            width: 800px;
-            background: white;
-            padding: 60px;
-            border: 20px solid #f8fafc;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
-            position: relative;
-            text-align: center;
-        }
-        .certificate-border {
-            border: 2px solid var(--gold);
-            padding: 40px;
-            height: 100%;
-        }
-        .header {
-            font-family: 'Playfair Display', serif;
-            font-size: 3rem;
-            color: #1e293b;
-            margin-bottom: 20px;
-        }
-        .sub-header {
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            color: var(--primary);
-            font-weight: 600;
-            margin-bottom: 40px;
-        }
-        .recipient {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin: 20px 0;
-            color: #0f172a;
-        }
-        .course-name {
-            font-size: 1.5rem;
-            font-style: italic;
-            color: #334155;
-            margin: 20px 0;
-        }
-        .footer {
-            margin-top: 60px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-        .sign {
-            border-top: 1px solid #cbd5e1;
-            padding-top: 10px;
-            width: 200px;
-        }
-        .verification {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.7rem;
-            color: #94a3b8;
-        }
-    </style>
+    <title>Chứng chỉ Hoàn thành - E16 LMS Education</title>
+    <!-- Importing Playfair Display (Serif), Great Vibes (Cursive Handwriting), and Plus Jakarta Sans (Sans-serif) -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Great+Vibes&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Link to the external CSS file to fully bypass CSP block -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='certificate.css') }}">
 </head>
 <body>
-    <div class="certificate-container">
-        <div class="certificate-border">
-            <div class="sub-header">Chứng chỉ Hoàn thành</div>
-            <div class="header">Certificate</div>
-            <p>Chứng nhận rằng</p>
-            <div class="recipient">{{ user.email.split('@')[0] }}</div>
-            <p>Đã hoàn thành xuất sắc khóa học</p>
-            <div class="course-name">{{ course.title }}</div>
-            <p>Cấp ngày {{ cert.issued_at.strftime('%d tháng %m năm %Y') }}</p>
-            
-            <div class="footer">
-                <div class="sign">
-                    <p>E16 LMS Education</p>
+    <div class="ambient-glow"></div>
+
+    <div class="certificate-wrapper">
+        <!-- A4 Landscape Card Container -->
+        <div class="certificate-card">
+            <!-- Wavy Burgundy Left Panel with Gold dots -->
+            <div class="side-panel">
+                <div class="side-panel-dots"></div>
+                <!-- Mini decorative emblem on burgundy side -->
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style="opacity: 0.3; z-index: 3;">
+                    <circle cx="12" cy="12" r="10" stroke="#d4af37" stroke-width="1" />
+                    <path d="M12 2v20M2 12h20" stroke="#d4af37" stroke-width="0.5" />
+                </svg>
+            </div>
+
+            <!-- Main Certificate Content Area -->
+            <div class="certificate-content">
+                <div class="double-gold-border">
+                    <div class="cert-header">Certificate of Achievement</div>
+                    <h1 class="cert-title">Chứng Chỉ Hoàn Thành</h1>
+                    <div class="cert-subtitle">E16 LMS Education Platform</div>
+
+                    <div class="cert-presented-to">Chứng nhận học viên</div>
+                    <div class="cert-recipient">{{ recipient_name }}</div>
+                    
+                    <div class="cert-divider"></div>
+
+                    <div class="cert-desc">
+                        Đã hoàn thành xuất sắc các học phần giảng dạy, bài tập thực hành chuyên sâu và hoàn thành các điều kiện khảo thí năng lực cho khóa học:
+                    </div>
+                    <div class="cert-course">{{ course.title }}</div>
+
+                    <!-- Footer Row (Signature & Date) -->
+                    <div class="cert-footer-row">
+                        <!-- Left Signature -->
+                        <div class="cert-sign-block">
+                            <div class="cert-sign-line">E16 Board</div>
+                            <div class="cert-sign-label">Hội đồng Khảo thí</div>
+                        </div>
+
+                        <!-- Right Date -->
+                        <div class="cert-sign-block" style="text-align: center;">
+                            <div class="cert-sign-line" style="font-family: inherit; font-size: 0.95rem; font-weight: 700; height: 33px; display: flex; align-items: flex-end; justify-content: center;">
+                                {{ cert.issued_at.strftime('%d/%m/%Y') }}
+                            </div>
+                            <div class="cert-sign-label">Ngày cấp chứng chỉ</div>
+                        </div>
+                    </div>
                 </div>
-                <div style="text-align: right;">
-                    <div style="font-size: 0.8rem; color: #64748b;">Mã xác thực:</div>
-                    <div style="font-weight: 600;">{{ cert.cert_code[:12] }}...</div>
+
+                <!-- Absolutely Positioned Gold Foil Award Seal SVG -->
+                <div class="gold-seal-container">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="90" height="90" viewBox="0 0 100 100">
+                        <!-- Hanging Ribbons -->
+                        <path d="M40 60 l-10 35 l20 -10 l20 10 l-10 -35" fill="#c5a043" opacity="0.95" />
+                        <path d="M50 60 l-8 35 l18 -10 l18 10 l-8 -35" fill="#e5c063" />
+                        
+                        <!-- Scalloped Gold Medal Outer Circle -->
+                        <path d="M 50 15 A 35 35 0 1 1 49.9 15 Z" fill="#c5a043" />
+                        <!-- Scalloped gold borders -->
+                        <circle cx="50" cy="50" r="32" fill="#e5c063" stroke="#c5a043" stroke-width="1.5" />
+                        <circle cx="50" cy="50" r="28" fill="#c5a043" />
+                        <circle cx="50" cy="50" r="26" fill="#e5c063" />
+                        
+                        <!-- Inner details -->
+                        <circle cx="50" cy="50" r="22" fill="#800f2f" />
+                        <circle cx="50" cy="50" r="20" fill="url(#goldGrad)" />
+                        
+                        <!-- Text/Stars in Seal -->
+                        <path d="M38 52 l4 4 l10 -10" stroke="#800f2f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                        <text x="50" y="38" font-family="'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="6" fill="#800f2f" text-anchor="middle">★ E16 ★</text>
+                        <text x="50" y="68" font-family="'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="5" fill="#800f2f" text-anchor="middle" letter-spacing="0.5">VERIFIED</text>
+                        
+                        <defs>
+                            <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#f3e5ab" />
+                                <stop offset="50%" stop-color="#e5c063" />
+                                <stop offset="100%" stop-color="#c5a043" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
                 </div>
             </div>
         </div>
-        <div class="verification">Xác thực trực tuyến tại: {{ request.url_root }}certificates/{{ cert.cert_code }}</div>
+
+        <!-- Verification Credentials Card below A4 Landscape -->
+        <div class="verification-box">
+            <div>
+                <div class="uid-label">Mã xác thực duy nhất (UID)</div>
+                <div class="uid-value">{{ cert.cert_code }}</div>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="badge-verified">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                    </svg>
+                    Xác minh hợp lệ
+                </div>
+                
+                <button class="copy-btn" onclick="copyLink()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                        <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                    </svg>
+                    Sao chép liên kết chia sẻ
+                </button>
+            </div>
+        </div>
     </div>
+
+    <script>
+        function copyLink() {
+            const url = window.location.href;
+            navigator.clipboard.writeText(url).then(() => {
+                alert("Đã sao chép liên kết chứng chỉ vào bộ nhớ tạm!");
+            }).catch(() => {
+                // Fallback
+                const input = document.createElement("input");
+                input.value = url;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand("copy");
+                document.body.removeChild(input);
+                alert("Đã sao chép liên kết chứng chỉ vào bộ nhớ tạm!");
+            });
+        }
+    </script>
 </body>
 </html>

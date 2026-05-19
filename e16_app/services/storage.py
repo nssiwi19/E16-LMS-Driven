@@ -6,6 +6,41 @@ from flask import current_app
 from werkzeug.utils import secure_filename
 
 
+DEFAULT_ALLOWED_EXTENSIONS = {
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".ppt",
+    ".pptx",
+    ".xls",
+    ".xlsx",
+    ".txt",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".zip",
+}
+
+
+def _allowed_extensions() -> set[str]:
+    raw = os.getenv("UPLOAD_ALLOWED_EXTENSIONS")
+    if not raw:
+        return DEFAULT_ALLOWED_EXTENSIONS
+    return {ext.strip().lower() if ext.strip().startswith(".") else f".{ext.strip().lower()}" for ext in raw.split(",") if ext.strip()}
+
+
+def _validate_upload(file) -> str:
+    filename = secure_filename(file.filename or "")
+    if not filename:
+        raise ValueError("Tên file không hợp lệ.")
+
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in _allowed_extensions():
+        raise ValueError("Định dạng file không được hỗ trợ.")
+
+    return ext
+
+
 # ---------- Abstract base ----------
 
 class BaseStorage(abc.ABC):
@@ -28,7 +63,7 @@ class LocalStorage(BaseStorage):
     def save_file(self, file, folder: str = "uploads") -> str:
         if not file:
             return None
-        ext = os.path.splitext(secure_filename(file.filename))[1].lower()
+        ext = _validate_upload(file)
         unique_name = f"{uuid.uuid4()}{ext}"
         upload_path = os.path.join(current_app.static_folder, folder)
         os.makedirs(upload_path, exist_ok=True)
@@ -64,7 +99,7 @@ class S3Storage(BaseStorage):
     def save_file(self, file, folder: str = "uploads") -> str:
         if not file:
             return None
-        ext = os.path.splitext(secure_filename(file.filename))[1].lower()
+        ext = _validate_upload(file)
         key = f"{folder}/{uuid.uuid4()}{ext}"
         self._client.upload_fileobj(
             file,

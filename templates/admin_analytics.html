@@ -56,11 +56,29 @@
     <canvas id="topCoursesChart"></canvas>
   </section>
   
-  <section class="card" style="display: flex; align-items: center; justify-content: center; text-align: center;">
-    <div>
-      <h2 style="margin-bottom: 16px;">Xuất dữ liệu báo cáo</h2>
-      <p style="color: var(--text-muted); margin-bottom: 24px;">Tải toàn bộ số liệu dưới dạng file CSV để xử lý Excel.</p>
-      <a href="{{ url_for('analytics.export_csv') }}" class="btn btn-primary">Tải xuống báo cáo (.csv)</a>
+  <section class="card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px;">
+    <h2 style="margin-bottom: 16px; font-weight: 700; color: #fff;">Xuất dữ liệu hệ thống (BI & Analyst)</h2>
+    <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 0.95rem; max-width: 420px;">
+      Tải xuống dữ liệu thô (Fact Tables & Dimension Tables) được định dạng tối ưu cho Looker Studio/Power BI hoặc phân tích chuyên sâu.
+    </p>
+    <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px;">
+      <a href="{{ url_for('analytics.export_csv', type='all') }}" class="btn btn-primary" style="width: 100%; font-weight: 600;">
+        📦 Tải gói dữ liệu thô (.zip)
+      </a>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <a href="{{ url_for('analytics.export_csv', type='learning_logs') }}" class="btn btn-outline btn-sm" style="font-size: 0.8rem; padding: 8px;">
+          📑 Learning Logs
+        </a>
+        <a href="{{ url_for('analytics.export_csv', type='quiz_attempts') }}" class="btn btn-outline btn-sm" style="font-size: 0.8rem; padding: 8px;">
+          📊 Quiz Attempts
+        </a>
+      </div>
+      <a href="{{ url_for('analytics.export_csv', type='datastudio') }}" class="btn btn-outline btn-sm" style="width: 100%;">
+        📊 Looker Studio OBT (.csv)
+      </a>
+      <a href="{{ url_for('analytics.export_csv', type='general') }}" class="btn btn-outline btn-sm" style="width: 100%; color: var(--text-muted);">
+        📄 Báo cáo tổng hợp (.csv)
+      </a>
     </div>
   </section>
 </div>

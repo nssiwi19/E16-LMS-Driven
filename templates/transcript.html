@@ -19,7 +19,7 @@
       </div>
 
       <div class="grid-2" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px;">
-        {% for item in data.items %}
+        {% for item in data['items'] %}
           <div style="padding: 16px; border: 1px solid var(--card-border); border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
             <div>
               <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">{{ item.type }}</div>

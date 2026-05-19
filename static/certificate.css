@@ -1,0 +1,291 @@
+:root {
+    --bg-dark: #080b19;
+    --burgundy-1: #5f0924;
+    --burgundy-2: #3f0415;
+    --gold: #c5a043;
+    --gold-light: #e5c063;
+    --text-dark: #1e293b;
+    --text-muted: #64748b;
+    --success: #10b981;
+    --primary: #4f46e5;
+}
+
+body {
+    background-color: var(--bg-dark);
+    margin: 0;
+    padding: 40px 20px;
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Ambient Backglows */
+.ambient-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(197, 160, 67, 0.08) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.certificate-wrapper {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 960px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Main A4 Landscape Card */
+.certificate-card {
+    background: #ffffff;
+    width: 100%;
+    aspect-ratio: 1.414; /* A4 Landscape proportions */
+    border-radius: 12px;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+}
+
+/* Burgundy Left Side Wave Panel */
+.side-panel {
+    width: 25%;
+    height: 100%;
+    background: linear-gradient(135deg, var(--burgundy-1) 0%, var(--burgundy-2) 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.side-panel::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -40px;
+    width: 80px;
+    height: 100%;
+    background: linear-gradient(135deg, var(--burgundy-1) 0%, var(--burgundy-2) 100%);
+    border-radius: 50%;
+    z-index: 2;
+}
+
+.side-panel-dots {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: radial-gradient(var(--gold) 1px, transparent 1px);
+    background-size: 16px 16px;
+    opacity: 0.15;
+    z-index: 1;
+}
+
+/* Gold border enclosing white area */
+.certificate-content {
+    flex: 1;
+    height: 100%;
+    padding: 32px 32px 32px 48px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: #ffffff;
+    z-index: 3;
+}
+
+.double-gold-border {
+    border: 3px double var(--gold);
+    height: 100%;
+    width: 100%;
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+    position: relative;
+}
+
+/* Header typography */
+.cert-header {
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--burgundy-1);
+    margin-bottom: 4px;
+}
+
+.cert-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2.3rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.cert-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.cert-presented-to {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 16px;
+    font-style: italic;
+}
+
+/* Calligraphy recipient name */
+.cert-recipient {
+    font-family: 'Great Vibes', cursive;
+    font-size: 3.2rem;
+    color: var(--burgundy-1);
+    margin: 4px 0;
+    line-height: 1;
+    display: inline-block;
+    padding-bottom: 4px;
+}
+
+.cert-divider {
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin-bottom: 12px;
+}
+
+.cert-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    max-width: 460px;
+    margin-bottom: 12px;
+}
+
+.cert-course {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--burgundy-1);
+}
+
+/* Bottom footer of certificate */
+.cert-footer-row {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: auto;
+}
+
+.cert-sign-block {
+    width: 150px;
+    text-align: center;
+}
+
+.cert-sign-line {
+    border-bottom: 1px solid var(--text-muted);
+    padding-bottom: 6px;
+    font-family: 'Great Vibes', cursive;
+    font-size: 1.4rem;
+    color: var(--burgundy-1);
+}
+
+.cert-sign-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 6px;
+}
+
+/* Scalloped Gold Award Seal SVG absolutely positioned */
+.gold-seal-container {
+    position: absolute;
+    right: 32px;
+    bottom: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 5;
+    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.15));
+}
+
+/* Verification details box at the bottom outside card */
+.verification-box {
+    background: rgba(16, 22, 50, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(143, 164, 255, 0.15);
+    border-radius: 16px;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.uid-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.uid-value {
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: var(--gold-light);
+    font-weight: bold;
+}
+
+.copy-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.copy-btn:hover {
+    background: #6366f1;
+    transform: translateY(-1px);
+}
+
+.badge-verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    padding: 6px 12px;
+    border-radius: 20px;
+    color: var(--success);
+    font-size: 0.75rem;
+    font-weight: 700;
+}

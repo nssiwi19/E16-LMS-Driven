@@ -1,9 +1,10 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_login import current_user
 
 from .extensions import db, login_manager, migrate, oauth, mail, csrf, limiter, talisman
+from .time_utils import utcnow
 
 def create_app():
     load_dotenv()
@@ -33,6 +34,34 @@ def create_app():
     # --- Initialize extensions ---
     db.init_app(app)
     migrate.init_app(app, db)
+    
+    # Automatically create missing tables and seed basic settings in development
+    if app_env == "development":
+        with app.app_context():
+            db.create_all()
+            # Self-healing column migration for price column
+            try:
+                from sqlalchemy import text
+                db.session.execute(text("SELECT price FROM courses LIMIT 1"))
+            except Exception:
+                try:
+                    db.session.execute(text("ALTER TABLE courses ADD COLUMN price INTEGER DEFAULT 250000"))
+                    db.session.commit()
+                except Exception as ex:
+                    app.logger.warning(f"Self-healing courses table column migration failed: {str(ex)}")
+            from .models import SystemSetting
+            default_settings = [
+                {"key": "site_name", "value": "E16 LMS", "description": "Tên hệ thống"},
+                {"key": "site_logo_url", "value": "", "description": "URL logo hệ thống"}
+            ]
+            mutated = False
+            for s_data in default_settings:
+                if not db.session.query(SystemSetting).filter_by(key=s_data["key"]).first():
+                    db.session.add(SystemSetting(**s_data))
+                    mutated = True
+            if mutated:
+                db.session.commit()
+
     csrf.init_app(app)
     login_manager.init_app(app)
     oauth.init_app(app)
@@ -49,6 +78,10 @@ def create_app():
     # --- Security Headers (Talisman) ---
     csp = {
         'default-src': '\'self\'',
+        'base-uri': '\'self\'',
+        'object-src': '\'none\'',
+        'form-action': '\'self\'',
+        'frame-ancestors': '\'self\'',
         'script-src': [
             '\'self\'',
             'https://cdn.jsdelivr.net',
@@ -73,7 +106,9 @@ def create_app():
             'https://images.unsplash.com',
             'https://*.unsplash.com',
             'https://cdn.jsdelivr.net',
-            'https://res.cloudinary.com'
+            'https://res.cloudinary.com',
+            'https://img.vietqr.io',
+            'https://api.qrserver.com'
         ],
         'frame-src': ['\'self\'', 'https://www.youtube.com', 'https://player.vimeo.com']
     }
@@ -182,7 +217,7 @@ def create_app():
     @app.route("/healthz")
     def healthz():
         """Liveness check: simple heartbeat return."""
-        return jsonify({"status": "healthy", "timestamp": datetime.utcnow().isoformat()}), 200
+        return jsonify({"status": "healthy", "timestamp": utcnow().isoformat()}), 200
 
     @app.route("/readyz")
     def readyz():
@@ -194,6 +229,26 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Readiness check failed: {str(e)}")
             return jsonify({"status": "unready", "database": "disconnected", "error": str(e)}), 503
+
+    @app.route("/metricsz")
+    def metricsz():
+        """Operational counters for monitoring. Protect with METRICS_TOKEN or admin session."""
+        metrics_token = os.getenv("METRICS_TOKEN")
+        authorized_by_token = bool(metrics_token and request.headers.get("X-Metrics-Token") == metrics_token)
+        authorized_by_admin = current_user.is_authenticated and current_user.role == "admin"
+        if not authorized_by_token and not authorized_by_admin:
+            return jsonify({"error": "forbidden"}), 403
+
+        from .models import Course, Enrollment, LearningLog, Notification, User
+        today_start = utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        return jsonify({
+            "users_total": db.session.query(User).count(),
+            "users_active": db.session.query(User).filter_by(is_active=True).count(),
+            "courses_published": db.session.query(Course).filter_by(status="published", is_deleted=False).count(),
+            "enrollments_total": db.session.query(Enrollment).count(),
+            "learning_logs_today": db.session.query(LearningLog).filter(LearningLog.timestamp >= today_start).count(),
+            "notifications_unread": db.session.query(Notification).filter_by(is_read=False).count(),
+        }), 200
 
     # --- CLI commands ---
     _register_cli(app)

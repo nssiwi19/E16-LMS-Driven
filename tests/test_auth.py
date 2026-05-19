@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import pytest
-from flask import request
 from e16_app import create_app, db
 from e16_app.models import User
 
@@ -30,7 +29,7 @@ def assert_login_redirect(client, email, password, expected_path):
     }, follow_redirects=True)
     
     assert response.status_code == 200
-    assert request.path == expected_path
+    assert response.request.path == expected_path
 
 @pytest.mark.auth
 @pytest.mark.smoke
@@ -39,6 +38,16 @@ def test_auth_pages_load(client):
     responses = [client.get("/auth/login"), client.get("/auth/register")]
     for r in responses:
         assert r.status_code == 200
+
+
+def test_security_headers_include_hardened_csp(client):
+    response = client.get("/auth/login")
+    csp = response.headers.get("Content-Security-Policy", "")
+
+    assert "object-src 'none'" in csp
+    assert "base-uri 'self'" in csp
+    assert "form-action 'self'" in csp
+    assert "frame-ancestors 'self'" in csp
 
 @pytest.mark.auth
 @pytest.mark.smoke
@@ -52,7 +61,7 @@ def test_user_registration(client, app):
     }, follow_redirects=True)
     
     assert response.status_code == 200
-    assert request.path == "/auth/login"
+    assert response.request.path == "/auth/login"
     
     with app.app_context():
         user = db.session.query(User).filter_by(email="test@e16.edu.vn").first()
@@ -71,7 +80,7 @@ def test_register_password_confirm_mismatch(client, app):
     
     # Registration should fail and redirect back to register page
     assert response.status_code == 200
-    assert request.path == "/auth/register"
+    assert response.request.path == "/auth/register"
     
     with app.app_context():
         user = db.session.query(User).filter_by(email="mismatch@e16.edu.vn").first()
@@ -95,7 +104,7 @@ def test_login_logout(client, app):
     # Logout
     response = client.get("/auth/logout", follow_redirects=True)
     assert response.status_code == 200
-    assert request.path == "/auth/login"
+    assert response.request.path == "/auth/login"
 
 @pytest.mark.auth
 def test_login_incorrect_password(client, app):
@@ -115,7 +124,7 @@ def test_login_incorrect_password(client, app):
     }, follow_redirects=True)
     
     assert response.status_code == 200
-    assert request.path == "/auth/login"
+    assert response.request.path == "/auth/login"
 
 @pytest.mark.auth
 def test_login_inactive_user(client, app):
@@ -142,4 +151,4 @@ def test_login_inactive_user(client, app):
     }, follow_redirects=True)
     
     assert response.status_code == 200
-    assert request.path == "/auth/login"
+    assert response.request.path == "/auth/login"

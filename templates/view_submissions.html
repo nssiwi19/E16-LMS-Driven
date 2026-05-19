@@ -65,4 +65,15 @@
     <div class="empty-box">Chưa có bài nộp nào phù hợp với bộ lọc.</div>
   {% endif %}
 </div>
+{% if pagination and pagination.pages > 1 %}
+  <div class="actions" style="justify-content: center; margin-top: 16px;">
+    {% if pagination.has_prev %}
+      <a class="btn btn-outline btn-sm" href="{{ url_for('teacher.view_submissions', assignment_id=assignment.id, status=request.args.get('status'), page=pagination.page - 1, per_page=pagination.per_page) }}">Trước</a>
+    {% endif %}
+    <span class="badge" style="background: rgba(255,255,255,0.1); color: var(--text-muted);">Trang {{ pagination.page }}/{{ pagination.pages }} · {{ pagination.total }} bài</span>
+    {% if pagination.has_next %}
+      <a class="btn btn-outline btn-sm" href="{{ url_for('teacher.view_submissions', assignment_id=assignment.id, status=request.args.get('status'), page=pagination.page + 1, per_page=pagination.per_page) }}">Sau</a>
+    {% endif %}
+  </div>
+{% endif %}
 {% endblock %}

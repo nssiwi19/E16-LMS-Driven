@@ -1,5 +1,4 @@
 import os
-from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import Blueprint, flash, redirect, render_template, request, url_for, current_app
 from flask_login import current_user
@@ -7,11 +6,19 @@ from sqlalchemy import func
 
 from ..auth_utils import login_required, role_required
 from ..extensions import db
-from ..models import Category, Course, Enrollment, LearningLog, Lesson, Quiz, Question, Choice, QuizAttempt, QuizAnswer, Assignment, Submission, Certificate
+from ..models import Category, Course, Enrollment, LearningLog, Lesson, Quiz, Question, Choice, QuizAttempt, QuizAnswer, Assignment, Submission, Certificate, User
 from ..services.logging import logger
+from ..time_utils import ensure_utc, utcnow
 
 bp = Blueprint("student", __name__)
 
+
+def _mask_email(email: str) -> str:
+    local, _, domain = email.partition("@")
+    if not domain:
+        return "***"
+    visible = local[:2] if len(local) > 2 else local[:1]
+    return f"{visible}***@{domain}"
 
 
 @bp.route("/courses")
@@ -20,7 +27,7 @@ def list_courses():
     query_str = request.args.get("q", "").strip()
     cat_slug = request.args.get("cat", "").strip()
     
-    courses_query = db.session.query(Course).filter(Course.status == "published")
+    courses_query = db.session.query(Course).filter(Course.status == "published", Course.is_deleted == False)
     
     if query_str:
         courses_query = courses_query.filter(Course.title.ilike(f"%{query_str}%"))
@@ -58,7 +65,7 @@ def dashboard():
     
     for en in enrollments:
         course = en.course
-        if not course:
+        if not course or course.is_deleted:
             continue
             
         my_rate = student_completion_rate(current_user.id, course.id)
@@ -106,23 +113,116 @@ def dashboard():
     )
 
 
+@bp.route("/checkout/<course_id>")
+@login_required
+@role_required("student")
+def checkout(course_id):
+    import random
+    import string
+    from datetime import datetime
+    course = db.session.get(Course, course_id)
+    if not course or course.status != "published" or course.is_deleted:
+        flash("Khóa học không khả dụng.", "error")
+        return redirect(url_for("student.list_courses"))
+        
+    enrollment = db.session.query(Enrollment).filter_by(user_id=current_user.id, course_id=course_id).first()
+    
+    if enrollment:
+        if enrollment.status in ["active", "completed"]:
+            return redirect(url_for("student.learn", course_id=course_id))
+        elif enrollment.status == "pending_payment":
+            # Check if expired (10 minutes = 600 seconds)
+            time_diff = datetime.utcnow() - enrollment.enrolled_at
+            if time_diff.total_seconds() > 600:
+                db.session.delete(enrollment)
+                db.session.commit()
+                flash("Phiên thanh toán QR đã hết hạn (quá 10 phút). Vui lòng quét lại.", "warning")
+                enrollment = None
+                
+    if not enrollment:
+        # Create a new pending enrollment with timestamp
+        enrollment = Enrollment(user_id=current_user.id, course_id=course_id, status="pending_payment", enrolled_at=datetime.utcnow())
+        db.session.add(enrollment)
+        db.session.commit()
+        
+    # Generate unique transaction code
+    random_str = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    tx_code = f"E16PAY{random_str}"
+    
+    # Calculate seconds left in 10-minute window
+    time_diff = datetime.utcnow() - enrollment.enrolled_at
+    seconds_left = max(0, int(600 - time_diff.total_seconds()))
+    
+    return render_template("checkout.html", course=course, tx_code=tx_code, seconds_left=seconds_left)
+
+
 @bp.post("/enroll/<course_id>")
 @login_required
 @role_required("student")
 def enroll(course_id):
+    from datetime import datetime
     course = db.session.get(Course, course_id)
-    if not course or course.status != "published":
+    if not course or course.status != "published" or course.is_deleted:
         flash("Khóa học không khả dụng.", "error")
         return redirect(url_for("student.list_courses"))
         
-    exists = db.session.query(Enrollment).filter(Enrollment.user_id == current_user.id, Enrollment.course_id == course_id).first()
-    if not exists:
-        db.session.add(Enrollment(user_id=current_user.id, course_id=course_id, status="active"))
+    enrollment = db.session.query(Enrollment).filter_by(user_id=current_user.id, course_id=course_id).first()
+    if not enrollment:
+        flash("Không tìm thấy thông tin đăng ký.", "error")
+        return redirect(url_for("student.list_courses"))
+        
+    # Verify expiration (10 minutes)
+    time_diff = datetime.utcnow() - enrollment.enrolled_at
+    if time_diff.total_seconds() > 600:
+        db.session.delete(enrollment)
         db.session.commit()
-        logger.log("enroll_course", user_id=current_user.id, user_email=current_user.email, resource_type="course", resource_id=course_id, metadata={"course_title": course.title})
-        flash(f"Đăng ký thành công khóa học {course.title}!", "success")
+        flash("Giao dịch thất bại: Mã QR đã hết hạn thanh toán (quá 10 phút)!", "error")
+        return redirect(url_for("student.list_courses"))
+        
+    # Activate enrollment
+    enrollment.status = "active"
+    db.session.commit()
     
+    logger.log("pay_course", user_id=current_user.id, user_email=current_user.email, resource_type="course", resource_id=course_id, metadata={"course_title": course.title, "amount": course.price})
+    flash(f"Thanh toán và đăng ký thành công khóa học {course.title}!", "success")
     return redirect(url_for("student.learn", course_id=course_id))
+
+
+@bp.post("/checkout/simulate-ipn/<course_id>")
+@login_required
+@role_required("student")
+def simulate_ipn(course_id):
+    enrollment = db.session.query(Enrollment).filter_by(user_id=current_user.id, course_id=course_id, status="pending_payment").first()
+    if not enrollment:
+        return {"status": "error", "message": "Giao dịch không tồn tại."}, 400
+        
+    # Verify expiration (10 minutes)
+    from datetime import datetime
+    time_diff = datetime.utcnow() - enrollment.enrolled_at
+    if time_diff.total_seconds() > 600:
+        db.session.delete(enrollment)
+        db.session.commit()
+        return {"status": "expired", "message": "Phiên thanh toán đã quá 10 phút và đã bị hủy."}, 400
+        
+    # Activate
+    enrollment.status = "active"
+    db.session.commit()
+    
+    # Log payment
+    logger.log("pay_course", user_id=current_user.id, user_email=current_user.email, resource_type="course", resource_id=course_id, metadata={"course_title": enrollment.course.title, "amount": enrollment.course.price})
+    return {"status": "success", "message": "Thanh toán thành công qua cổng MB Bank IPN!"}
+
+
+@bp.post("/checkout/cancel/<course_id>")
+@login_required
+@role_required("student")
+def cancel_checkout(course_id):
+    enrollment = db.session.query(Enrollment).filter_by(user_id=current_user.id, course_id=course_id, status="pending_payment").first()
+    if enrollment:
+        db.session.delete(enrollment)
+        db.session.commit()
+        flash("Đã hủy giao dịch thanh toán QR.", "info")
+    return redirect(url_for("student.list_courses"))
 
 
 @bp.route("/learn/<course_id>")
@@ -130,12 +230,16 @@ def enroll(course_id):
 @role_required("student")
 def learn(course_id):
     course = db.session.get(Course, course_id)
-    if not course:
+    if not course or course.is_deleted:
         return redirect(url_for("student.dashboard"))
         
     enrollment = db.session.query(Enrollment).filter(Enrollment.user_id == current_user.id, Enrollment.course_id == course_id).first()
     if not enrollment:
         return redirect(url_for("student.list_courses"))
+        
+    if enrollment.status == "pending_payment":
+        flash("Vui lòng hoàn tất thanh toán chuyển khoản QR để tham gia khóa học.", "warning")
+        return redirect(url_for("student.checkout", course_id=course_id))
         
     lessons = db.session.query(Lesson).filter(Lesson.course_id == course_id).order_by(Lesson.sequence_order.asc()).all()
     quizzes = db.session.query(Quiz).filter_by(course_id=course_id, is_published=True).all()
@@ -147,7 +251,7 @@ def learn(course_id):
     selected_id = request.args.get("lesson") or lessons[0].id
     selected_lesson = next((ls for ls in lessons if ls.id == selected_id), lessons[0])
     
-    db.session.add(LearningLog(user_id=current_user.id, lesson_id=selected_lesson.id, action_type="start", timestamp=datetime.utcnow()))
+    db.session.add(LearningLog(user_id=current_user.id, lesson_id=selected_lesson.id, action_type="start", timestamp=utcnow()))
     db.session.commit()
     logger.log("view_lesson", user_id=current_user.id, user_email=current_user.email, resource_type="lesson", resource_id=selected_lesson.id, metadata={"course_id": course_id, "lesson_title": selected_lesson.title})
 
@@ -177,12 +281,18 @@ def learn(course_id):
 @login_required
 @role_required("student")
 def mark_complete(course_id, lesson_id):
+    lesson = db.session.get(Lesson, lesson_id)
+    enrollment = db.session.query(Enrollment).filter_by(user_id=current_user.id, course_id=course_id).first()
+    if not lesson or lesson.course_id != course_id or not enrollment:
+        flash("Bạn không có quyền cập nhật bài học này.", "error")
+        return redirect(url_for("student.dashboard"))
+
     exists = db.session.query(LearningLog).filter_by(
         user_id=current_user.id, lesson_id=lesson_id, action_type="complete"
     ).first()
     
     if not exists:
-        db.session.add(LearningLog(user_id=current_user.id, lesson_id=lesson_id, action_type="complete", timestamp=datetime.utcnow()))
+        db.session.add(LearningLog(user_id=current_user.id, lesson_id=lesson_id, action_type="complete", timestamp=utcnow()))
         db.session.commit()
         logger.log("complete_lesson", user_id=current_user.id, user_email=current_user.email, resource_type="lesson", resource_id=lesson_id, metadata={"course_id": course_id})
         update_enrollment_if_completed(current_user.id, course_id)
@@ -197,7 +307,10 @@ def mark_complete(course_id, lesson_id):
 @role_required("student")
 def take_quiz(course_id, quiz_id):
     quiz = db.session.get(Quiz, quiz_id)
-    if not quiz or not quiz.is_published: return redirect(url_for("student.dashboard"))
+    enrollment = db.session.query(Enrollment).filter_by(user_id=current_user.id, course_id=course_id).first()
+    if not quiz or quiz.course_id != course_id or not quiz.is_published or not enrollment:
+        flash("Bạn không có quyền làm bài trắc nghiệm này.", "error")
+        return redirect(url_for("student.dashboard"))
     
     # Check attempts
     attempts = db.session.query(QuizAttempt).filter_by(user_id=current_user.id, quiz_id=quiz_id).count()
@@ -231,24 +344,31 @@ def take_quiz(course_id, quiz_id):
 @role_required("student")
 def submit_assignment(course_id, assignment_id):
     assignment = db.session.get(Assignment, assignment_id)
-    if not assignment: return redirect(url_for("student.dashboard"))
+    enrollment = db.session.query(Enrollment).filter_by(user_id=current_user.id, course_id=course_id).first()
+    if not assignment or assignment.course_id != course_id or not enrollment:
+        flash("Bạn không có quyền nộp bài tập này.", "error")
+        return redirect(url_for("student.dashboard"))
     
     existing_sub = db.session.query(Submission).filter_by(user_id=current_user.id, assignment_id=assignment_id).first()
     
     if request.method == "POST":
-        if assignment.deadline and datetime.utcnow() > assignment.deadline:
+        if assignment.deadline and utcnow() > ensure_utc(assignment.deadline):
             flash("Đã hết hạn nộp bài.", "error")
             return redirect(url_for("student.learn", course_id=course_id))
             
         from ..services.storage import storage
         text_content = request.form.get("text_content")
         file = request.files.get("file")
-        file_path = storage.save_file(file, "assignments") if file and assignment.allow_file else None
+        try:
+            file_path = storage.save_file(file, "assignments") if file and assignment.allow_file else None
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return redirect(url_for("student.submit_assignment", course_id=course_id, assignment_id=assignment_id))
             
         if existing_sub:
             existing_sub.text_content = text_content
             if file_path: existing_sub.file_path = file_path
-            existing_sub.submitted_at = datetime.utcnow()
+            existing_sub.submitted_at = utcnow()
             existing_sub.status = "pending"
         else:
             sub = Submission(
@@ -355,6 +475,7 @@ def _calc_streak(user_id):
     if not rows:
         return 0
 
+    from datetime import datetime
     dates = sorted({r[0] if isinstance(r[0], date) else datetime.strptime(str(r[0]), "%Y-%m-%d").date() for r in rows}, reverse=True)
     streak = 0
     expected = date.today()
@@ -413,7 +534,28 @@ def view_certificates():
 
 @bp.route("/certificates/<cert_code>")
 def public_certificate(cert_code):
-    cert = db.session.query(Certificate, Course, User).join(Course).join(User, User.id == Certificate.user_id).filter(Certificate.cert_code == cert_code).first()
+    cert = (
+        db.session.query(Certificate, Course, User)
+        .join(Course, Course.id == Certificate.course_id)
+        .join(User, User.id == Certificate.user_id)
+        .filter(Certificate.cert_code == cert_code)
+        .first()
+    )
     if not cert:
         return "Chứng chỉ không tồn tại hoặc mã xác thực không đúng.", 404
-    return render_template("certificate_view.html", cert=cert[0], course=cert[1], user=cert[2])
+    if cert[1].is_deleted:
+        return "Chứng chỉ không còn khả dụng công khai.", 404
+    
+    user = cert[2]
+    course = cert[1]
+    # Strictly verify the student has reached 100% completion rate
+    rate = student_completion_rate(user.id, course.id)
+    if rate < 100:
+        return "Chứng chỉ chưa hợp lệ do khóa học chưa hoàn thành 100%.", 403
+        
+    return render_template(
+        "certificate_view.html",
+        cert=cert[0],
+        course=course,
+        recipient_name=_mask_email(user.email),
+    )

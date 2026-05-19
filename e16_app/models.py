@@ -48,11 +48,13 @@ class Course(db.Model):
     cover_image_url = db.Column(db.String(500), default="", nullable=False)
     total_lessons = db.Column(db.Integer, default=0, nullable=False)
     status = db.Column(db.String(20), default="draft", nullable=False, index=True)  # draft, pending_review, published, rejected
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
     category_id = db.Column(db.String(36), db.ForeignKey("categories.id"), nullable=True, index=True)
     teacher_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
     rejection_note = db.Column(db.Text)
     submitted_at = db.Column(db.DateTime)
     published_at = db.Column(db.DateTime)
+    price = db.Column(db.Integer, default=250000, nullable=False)
     created_at = db.Column(db.DateTime, default=_utcnow, nullable=False)
 
 
@@ -90,6 +92,9 @@ class Lesson(db.Model):
 
 class Enrollment(db.Model):
     __tablename__ = "enrollments"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "course_id", name="uq_enrollments_user_course"),
+    )
     id = db.Column(db.String(36), primary_key=True, default=new_uuid)
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
     course_id = db.Column(db.String(36), db.ForeignKey("courses.id"), nullable=False, index=True)
@@ -158,6 +163,7 @@ class ForumThread(db.Model):
     title = db.Column(db.String(255), nullable=False)
     body = db.Column(db.Text, nullable=False)
     is_pinned = db.Column(db.Boolean, default=False)
+    is_hidden = db.Column(db.Boolean, default=False, nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=_utcnow)
 
 
@@ -167,11 +173,15 @@ class ForumReply(db.Model):
     thread_id = db.Column(db.String(36), db.ForeignKey("forum_threads.id"), nullable=False, index=True)
     author_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
     body = db.Column(db.Text, nullable=False)
+    is_hidden = db.Column(db.Boolean, default=False, nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=_utcnow)
 
 
 class Certificate(db.Model):
     __tablename__ = "certificates"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "course_id", name="uq_certificates_user_course"),
+    )
     id = db.Column(db.String(36), primary_key=True, default=new_uuid)
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
     course_id = db.Column(db.String(36), db.ForeignKey("courses.id"), nullable=False, index=True)

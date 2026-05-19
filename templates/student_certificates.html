@@ -3,24 +3,75 @@
 <header class="top-header">
   <div>
     <h1>Chứng chỉ của tôi</h1>
-    <p>Thành quả xứng đáng cho sự nỗ lực của bạn.</p>
+    <p>Thành quả xứng đáng cho sự nỗ lực, kiên trì và đam mê chinh phục tri thức của bạn.</p>
   </div>
 </header>
 
 <div class="course-grid">
   {% for cert, course in certs %}
-    <div class="card" style="text-align: center; padding: 32px;">
-      <div style="font-size: 3rem; margin-bottom: 20px;">🎓</div>
-      <h3 style="margin-bottom: 8px;">{{ course.title }}</h3>
-      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 24px;">Cấp ngày: {{ cert.issued_at.strftime('%d/%m/%Y') }}</p>
+    <div class="card" style="text-align: center; padding: 40px 24px; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: space-between; min-height: 380px;">
+      <!-- Glowing background orb in card -->
+      <div style="position: absolute; top: -50px; left: -50px; width: 150px; height: 150px; border-radius: 50%; background: rgba(212, 175, 55, 0.08); filter: blur(30px); pointer-events: none;"></div>
       
-      <div style="display: flex; gap: 12px; justify-content: center;">
-        <a href="{{ url_for('student.public_certificate', cert_code=cert.cert_code) }}" class="btn btn-primary btn-sm" target="_blank">Xem chứng chỉ</a>
-        <button class="btn btn-outline btn-sm" onclick="alert('Tính năng tải PDF đang được phát triển!')">Tải PDF</button>
+      <!-- Premium Verified Badge Ribbons SVG -->
+      <div style="margin-bottom: 24px; filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.35)); transition: var(--transition);" class="badge-icon-hover">
+        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="10" r="5" fill="#d4af37" />
+          <path d="M9.5 14l-2.5 5 3.5-1.5 2 3.5 2-3.5 3.5 1.5-2.5-5" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="12" cy="10" r="2.5" fill="#fff" opacity="0.3" />
+          <path d="M10.5 10l1 1 2-2" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+
+      <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; margin-bottom: 24px;">
+        <span style="font-size: 0.7rem; font-weight: 800; color: #d4af37; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; display: block;">ĐÃ XÁC MINH</span>
+        <h3 style="margin: 0 0 8px 0; font-size: 1.25rem; font-weight: 700; color: #fff; line-height: 1.4;">{{ course.title }}</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Cấp ngày: {{ cert.issued_at.strftime('%d/%m/%Y') }}</p>
+      </div>
+      
+      <div style="display: flex; gap: 12px; width: 100%; justify-content: center; flex-wrap: wrap; margin-top: auto;">
+        <a href="{{ url_for('student.public_certificate', cert_code=cert.cert_code) }}" class="btn btn-primary btn-sm" target="_blank" style="flex: 1; min-width: 110px;">
+          Xem trực tuyến
+        </a>
+        <button class="btn btn-outline btn-sm" onclick="copyCertLink('{{ cert.cert_code }}')" style="flex: 1; min-width: 110px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5zm-8.5 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm11 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/>
+          </svg>
+          Chia sẻ
+        </button>
       </div>
     </div>
   {% else %}
-    <div class="empty-box" style="grid-column: 1 / -1;">Bạn chưa hoàn thành khóa học nào để nhận chứng chỉ.</div>
+    <div class="card empty-box" style="grid-column: 1 / -1; padding: 48px; text-align: center;">
+      <div style="font-size: 3rem; margin-bottom: 16px;">🎓</div>
+      <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Chưa có chứng chỉ nào</h3>
+      <p style="color: var(--text-muted); margin-bottom: 24px;">Hãy hoàn thành 100% các bài học của một khóa học để mở khóa chứng chỉ vàng vinh danh của bạn!</p>
+      <a href="{{ url_for('student.list_courses') }}" class="btn btn-primary">Khám phá khóa học ngay</a>
+    </div>
   {% endfor %}
 </div>
+
+<script>
+  function copyCertLink(certCode) {
+    const shareUrl = `${window.location.origin}/certificates/${certCode}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      alert("Đã sao chép liên kết chia sẻ chứng chỉ của bạn!");
+    }).catch(() => {
+      // Fallback
+      const input = document.createElement("input");
+      input.value = shareUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+      alert("Đã sao chép liên kết chia sẻ chứng chỉ của bạn!");
+    });
+  }
+</script>
+
+<style>
+  .badge-icon-hover:hover {
+    transform: scale(1.1) rotate(5deg);
+  }
+</style>
 {% endblock %}

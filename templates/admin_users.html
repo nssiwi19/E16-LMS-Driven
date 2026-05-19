@@ -11,11 +11,39 @@
   <table class="table" style="width: 100%; border-collapse: collapse;">
     <thead>
       <tr style="text-align: left; border-bottom: 1px solid var(--card-border);">
-        <th style="padding: 12px;">Email</th>
-        <th style="padding: 12px;">Vai trò</th>
-        <th style="padding: 12px;">Ngày tham gia</th>
-        <th style="padding: 12px;">Lần cuối đăng nhập</th>
-        <th style="padding: 12px;">Hành động</th>
+        <th style="padding: 12px; color: var(--text-main);">Email</th>
+        <th style="padding: 12px; color: var(--text-main);">Số điện thoại</th>
+        <th style="padding: 12px;">
+          <a href="{{ url_for('admin.list_users', sort_by='role', order='asc' if sort_by == 'role' and order == 'desc' else 'desc') }}" style="color: var(--text-main); text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+            Vai trò
+            {% if sort_by == 'role' %}
+              <span style="font-size: 10px;">{{ '▲' if order == 'asc' else '▼' }}</span>
+            {% else %}
+              <span style="font-size: 10px; opacity: 0.3;">↕</span>
+            {% endif %}
+          </a>
+        </th>
+        <th style="padding: 12px;">
+          <a href="{{ url_for('admin.list_users', sort_by='created_at', order='asc' if sort_by == 'created_at' and order == 'desc' else 'desc') }}" style="color: var(--text-main); text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+            Ngày tham gia
+            {% if sort_by == 'created_at' %}
+              <span style="font-size: 10px;">{{ '▲' if order == 'asc' else '▼' }}</span>
+            {% else %}
+              <span style="font-size: 10px; opacity: 0.3;">↕</span>
+            {% endif %}
+          </a>
+        </th>
+        <th style="padding: 12px;">
+          <a href="{{ url_for('admin.list_users', sort_by='last_login', order='asc' if sort_by == 'last_login' and order == 'desc' else 'desc') }}" style="color: var(--text-main); text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+            Lần cuối đăng nhập
+            {% if sort_by == 'last_login' %}
+              <span style="font-size: 10px;">{{ '▲' if order == 'asc' else '▼' }}</span>
+            {% else %}
+              <span style="font-size: 10px; opacity: 0.3;">↕</span>
+            {% endif %}
+          </a>
+        </th>
+        <th style="padding: 12px; color: var(--text-main);">Hành động</th>
       </tr>
     </thead>
     <tbody>
@@ -24,13 +52,16 @@
           <td style="padding: 12px;">
             <div style="font-weight: 600;">{{ u.email }}</div>
           </td>
+          <td style="padding: 12px; color: var(--text-muted);">
+            {{ u.phone if u.phone else '—' }}
+          </td>
           <td style="padding: 12px;">
             <form action="{{ url_for('admin.update_user_role', user_id=u.id) }}" method="post" style="display: flex; gap: 8px; align-items: center;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <select name="role" class="btn btn-outline btn-sm" onchange="this.form.submit()" {% if u.id == current_user.id %}disabled{% endif %}>
-                <option value="student" {% if u.role == 'student' %}selected{% endif %}>Student</option>
-                <option value="teacher" {% if u.role == 'teacher' %}selected{% endif %}>Teacher</option>
-                <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
+              <select name="role" class="btn btn-outline btn-sm" onchange="this.form.submit()" {% if u.id == current_user.id %}disabled{% endif %} style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--card-border); cursor: pointer;">
+                <option value="student" style="color: #0f172a; background: #ffffff;" {% if u.role == 'student' %}selected{% endif %}>Student</option>
+                <option value="teacher" style="color: #0f172a; background: #ffffff;" {% if u.role == 'teacher' %}selected{% endif %}>Teacher</option>
+                <option value="admin" style="color: #0f172a; background: #ffffff;" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
               </select>
             </form>
           </td>
@@ -61,4 +92,15 @@
     </tbody>
   </table>
 </div>
+{% if pagination and pagination.pages > 1 %}
+  <div class="actions" style="justify-content: center; margin-top: 16px;">
+    {% if pagination.has_prev %}
+      <a class="btn btn-outline btn-sm" href="{{ url_for('admin.list_users', page=pagination.page - 1, per_page=pagination.per_page, sort_by=sort_by, order=order) }}">Trước</a>
+    {% endif %}
+    <span class="badge" style="background: rgba(255,255,255,0.1); color: var(--text-muted);">Trang {{ pagination.page }}/{{ pagination.pages }} · {{ pagination.total }} người dùng</span>
+    {% if pagination.has_next %}
+      <a class="btn btn-outline btn-sm" href="{{ url_for('admin.list_users', page=pagination.page + 1, per_page=pagination.per_page, sort_by=sort_by, order=order) }}">Sau</a>
+    {% endif %}
+  </div>
+{% endif %}
 {% endblock %}

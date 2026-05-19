@@ -1,7 +1,7 @@
 import os
-from datetime import datetime
 from supabase import create_client, Client
 from flask import request, current_app
+from ..time_utils import utcnow
 
 class SupabaseLogger:
     def __init__(self):
@@ -34,7 +34,7 @@ class SupabaseLogger:
                 "metadata": metadata or {},
                 "ip_address": ip_address,
                 "status": status,
-                "created_at": datetime.utcnow().isoformat()
+                "created_at": utcnow().isoformat()
             }
             
             self.client.table("system_logs").insert(data).execute()

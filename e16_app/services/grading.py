@@ -1,6 +1,6 @@
 from ..extensions import db
 from ..models import Quiz, QuizAttempt, QuizAnswer, Question, Choice, Submission
-from datetime import datetime
+from ..time_utils import utcnow
 
 class GradingService:
     @staticmethod
@@ -14,7 +14,7 @@ class GradingService:
             return None
             
         if served_q_ids:
-            questions = db.session.query(Question).filter(Question.id.in_(served_q_ids)).all()
+            questions = db.session.query(Question).filter(Question.quiz_id == quiz_id, Question.id.in_(served_q_ids)).all()
         else:
             questions = db.session.query(Question).filter_by(quiz_id=quiz_id).all()
         total_questions = len(questions)
@@ -38,7 +38,9 @@ class GradingService:
                     if correct_choice and str(correct_choice.id) == str(user_choice_id):
                         is_correct = True
                         
-                    db.session.add(QuizAnswer(attempt_id=attempt.id, question_id=q.id, choice_id=user_choice_id))
+                    selected_choice = db.session.query(Choice).filter_by(id=user_choice_id, question_id=q.id).first()
+                    if selected_choice:
+                        db.session.add(QuizAnswer(attempt_id=attempt.id, question_id=q.id, choice_id=user_choice_id))
                     
             elif q.q_type == 'checkbox':
                 user_choice_ids = user_answer_list
@@ -49,7 +51,9 @@ class GradingService:
                     is_correct = True
                     
                 for cid in user_choice_ids:
-                    db.session.add(QuizAnswer(attempt_id=attempt.id, question_id=q.id, choice_id=cid))
+                    selected_choice = db.session.query(Choice).filter_by(id=cid, question_id=q.id).first()
+                    if selected_choice:
+                        db.session.add(QuizAnswer(attempt_id=attempt.id, question_id=q.id, choice_id=cid))
                     
             elif q.q_type == 'fill_in_blank':
                 user_text = user_answer_list[0] if user_answer_list else ""
@@ -66,7 +70,8 @@ class GradingService:
         
         score = (correct_count / total_questions * 100) if total_questions > 0 else 0
         attempt.score = score
-        attempt.completed_at = datetime.utcnow()
+        attempt.passed = score >= quiz.pass_score
+        attempt.completed_at = utcnow()
         db.session.commit()
         
         return attempt
@@ -80,9 +85,10 @@ class GradingService:
         if not sub:
             return False
             
-        sub.score = score
+        sub.score = max(0, min(100, int(score)))
         sub.feedback = feedback
-        sub.graded_at = datetime.utcnow()
+        sub.status = "graded"
+        sub.graded_at = utcnow()
         sub.graded_by = teacher_id
         db.session.commit()
         return True

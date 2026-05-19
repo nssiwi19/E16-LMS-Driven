@@ -32,7 +32,7 @@
       <div style="display: flex; flex-direction: column; gap: 16px;">
         {% for row in rows %}
           <div class="card" style="display: flex; gap: 24px; align-items: center;">
-            <img src="{{ row.course.cover_image_url or 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3' }}" alt="" style="width: 100px; height: 100px; border-radius: 12px; object-fit: cover;">
+            <img src="{{ row.course.cover_image_url or 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3' }}" alt="" style="width: 100px; height: 100px; border-radius: 12px; object-fit: cover; flex-shrink: 0; min-width: 100px; max-width: 100px;">
             <div style="flex: 1;">
               <h3 style="margin-bottom: 8px;">{{ row.course.title }}</h3>
               <div class="progress-container" style="margin-bottom: 12px;">

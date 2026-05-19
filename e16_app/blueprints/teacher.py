@@ -1,6 +1,6 @@
 import csv
 import io
-from datetime import datetime
+import os
 from flask import Blueprint, flash, redirect, render_template, request, url_for, make_response, jsonify
 from flask_login import current_user
 from sqlalchemy import func
@@ -8,16 +8,22 @@ from sqlalchemy import func
 from ..auth_utils import login_required, role_required
 from ..extensions import db
 from ..models import Course, Enrollment, Lesson, Quiz, Question, Choice, Assignment, Submission, User, QuizAttempt
+from ..pagination import get_pagination, paginate_query
 from ..services.audit import log_action
+from ..time_utils import parse_datetime_utc, utcnow
 
 bp = Blueprint("teacher", __name__, url_prefix="/teacher")
+
+
+def _export_max_rows() -> int:
+    return max(1, int(os.getenv("EXPORT_MAX_ROWS", "50000")))
 
 
 @bp.route("/dashboard")
 @login_required
 @role_required("teacher")
 def dashboard():
-    courses = db.session.query(Course).filter(Course.teacher_id == current_user.id).all()
+    courses = db.session.query(Course).filter(Course.teacher_id == current_user.id, Course.is_deleted == False).all()
     total_courses = len(courses)
     
     course_ids = [c.id for c in courses]
@@ -37,7 +43,7 @@ def dashboard():
 @login_required
 @role_required("teacher")
 def manage_courses():
-    courses = db.session.query(Course).filter(Course.teacher_id == current_user.id).all()
+    courses = db.session.query(Course).filter(Course.teacher_id == current_user.id, Course.is_deleted == False).all()
     return render_template("manage_courses.html", courses=courses)
 
 
@@ -63,7 +69,7 @@ def create_course():
 @role_required("teacher")
 def edit_course(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         flash("Không tìm thấy khóa học hoặc bạn không có quyền chỉnh sửa.", "error")
         return redirect(url_for("teacher.manage_courses"))
         
@@ -88,7 +94,7 @@ def edit_course(course_id):
 @role_required("teacher")
 def submit_course(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return "Unauthorized", 403
     
     # Validation: Ensure course has at least one lesson
@@ -99,7 +105,7 @@ def submit_course(course_id):
         return redirect(url_for("teacher.manage_courses"))
         
     course.status = "pending_review"
-    course.submitted_at = datetime.utcnow()
+    course.submitted_at = utcnow()
     db.session.commit()
     
     from ..services.audit import log_action
@@ -113,12 +119,14 @@ def submit_course(course_id):
 @role_required("teacher")
 def delete_course(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return "Unauthorized", 403
         
-    db.session.delete(course)
+    course.is_deleted = True
+    course.status = "archived"
     db.session.commit()
-    flash("Đã xóa khóa học.", "info")
+    log_action("course_soft_deleted", "Course", course_id, {"title": course.title})
+    flash("Đã lưu trữ khóa học.", "info")
     return redirect(url_for("teacher.manage_courses"))
 
 
@@ -127,7 +135,7 @@ def delete_course(course_id):
 @role_required("teacher")
 def course_students(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
         
     enrollments = db.session.query(Enrollment, User).join(User, User.id == Enrollment.user_id).filter(Enrollment.course_id == course_id).all()
@@ -155,7 +163,7 @@ def course_students(course_id):
 @role_required("teacher")
 def manage_lessons(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
     lessons = db.session.query(Lesson).filter(Lesson.course_id == course_id).order_by(Lesson.sequence_order.asc()).all()
     return render_template("manage_lessons.html", course=course, lessons=lessons)
@@ -166,7 +174,7 @@ def manage_lessons(course_id):
 @role_required("teacher")
 def create_lesson(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
     
     title = request.form.get("title")
@@ -196,14 +204,14 @@ def create_lesson(course_id):
 @role_required("teacher")
 def reorder_lessons(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return "Unauthorized", 403
         
     lesson_ids = request.form.getlist("lesson_ids[]")
     for index, l_id in enumerate(lesson_ids):
         lesson = db.session.get(Lesson, l_id)
         if lesson and lesson.course_id == course_id:
-            lesson.order = index + 1
+            lesson.sequence_order = index + 1
             
     db.session.commit()
     return jsonify({"status": "success"})
@@ -215,7 +223,7 @@ def reorder_lessons(course_id):
 def edit_lesson(course_id, lesson_id):
     course = db.session.get(Course, course_id)
     lesson = db.session.get(Lesson, lesson_id)
-    if not course or not lesson or course.teacher_id != current_user.id:
+    if not course or not lesson or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
         
     if request.method == "POST":
@@ -235,7 +243,7 @@ def edit_lesson(course_id, lesson_id):
 def delete_lesson(course_id, lesson_id):
     course = db.session.get(Course, course_id)
     lesson = db.session.get(Lesson, lesson_id)
-    if course and lesson and course.teacher_id == current_user.id:
+    if course and lesson and course.teacher_id == current_user.id and not course.is_deleted:
         db.session.delete(lesson)
         db.session.commit()
         recalc_total_lessons(course_id)
@@ -250,7 +258,7 @@ def delete_lesson(course_id, lesson_id):
 @role_required("teacher")
 def manage_quizzes(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
     quizzes = db.session.query(Quiz).filter_by(course_id=course_id).all()
     return render_template("manage_quizzes.html", course=course, quizzes=quizzes)
@@ -261,7 +269,7 @@ def manage_quizzes(course_id):
 @role_required("teacher")
 def create_quiz(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
         
     if request.method == "POST":
@@ -286,7 +294,7 @@ def create_quiz(course_id):
 def edit_quiz(course_id, quiz_id):
     course = db.session.get(Course, course_id)
     quiz = db.session.get(Quiz, quiz_id)
-    if not course or not quiz or course.teacher_id != current_user.id:
+    if not course or not quiz or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
         
     if request.method == "POST":
@@ -319,7 +327,11 @@ def edit_quiz(course_id, quiz_id):
 @role_required("teacher")
 def add_question(quiz_id):
     quiz = db.session.get(Quiz, quiz_id)
-    if not quiz: return redirect(url_for("teacher.manage_courses"))
+    if not quiz:
+        return redirect(url_for("teacher.manage_courses"))
+    course = db.session.get(Course, quiz.course_id)
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
+        return "Unauthorized", 403
     
     q_text = request.form.get("text")
     q_type = request.form.get("q_type", "mcq")
@@ -356,7 +368,7 @@ def add_question(quiz_id):
 @role_required("teacher")
 def manage_assignments(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
     assignments = db.session.query(Assignment).filter_by(course_id=course_id).all()
     return render_template("manage_assignments.html", course=course, assignments=assignments)
@@ -367,12 +379,12 @@ def manage_assignments(course_id):
 @role_required("teacher")
 def create_assignment(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
         
     if request.method == "POST":
         deadline_str = request.form.get("deadline")
-        deadline = datetime.fromisoformat(deadline_str) if deadline_str else None
+        deadline = parse_datetime_utc(deadline_str)
         
         assign = Assignment(
             course_id=course_id,
@@ -402,8 +414,10 @@ def create_assignment(course_id):
 @role_required("teacher")
 def view_submissions(assignment_id):
     assignment = db.session.get(Assignment, assignment_id)
+    if not assignment:
+        return redirect(url_for("teacher.manage_courses"))
     course = db.session.get(Course, assignment.course_id)
-    if not assignment or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
         
     status_filter = request.args.get("status")
@@ -412,8 +426,9 @@ def view_submissions(assignment_id):
     if status_filter:
         query = query.filter(Submission.status == status_filter)
         
-    submissions = query.all()
-    return render_template("view_submissions.html", assignment=assignment, submissions=submissions, course=course)
+    page, per_page = get_pagination(default_per_page=20, max_per_page=100)
+    pagination = paginate_query(query.order_by(Submission.submitted_at.desc()), page, per_page)
+    return render_template("view_submissions.html", assignment=assignment, submissions=pagination["items"], course=course, pagination=pagination)
 
 
 @bp.post("/submissions/<submission_id>/grade")
@@ -421,13 +436,17 @@ def view_submissions(assignment_id):
 @role_required("teacher")
 def grade_submission(submission_id):
     sub = db.session.get(Submission, submission_id)
+    if not sub:
+        return redirect(url_for("teacher.manage_courses"))
     assignment = db.session.get(Assignment, sub.assignment_id)
+    if not assignment:
+        return redirect(url_for("teacher.manage_courses"))
     course = db.session.get(Course, assignment.course_id)
     
-    if not sub or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
         
-    score = int(request.form.get("score", 0))
+    score = max(0, min(100, int(request.form.get("score", 0))))
     feedback = request.form.get("feedback")
     
     from ..services import GradingService
@@ -446,9 +465,14 @@ def grade_submission(submission_id):
 @role_required("teacher")
 def export_grades(assignment_id):
     assignment = db.session.get(Assignment, assignment_id)
-    if not assignment: return redirect(url_for("teacher.manage_courses"))
+    if not assignment:
+        return redirect(url_for("teacher.manage_courses"))
+    course = db.session.get(Course, assignment.course_id)
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
+        return redirect(url_for("teacher.manage_courses"))
     
-    submissions = db.session.query(Submission, User).join(User, User.id == Submission.user_id).filter(Submission.assignment_id == assignment_id).all()
+    max_rows = _export_max_rows()
+    submissions = db.session.query(Submission, User).join(User, User.id == Submission.user_id).filter(Submission.assignment_id == assignment_id).limit(max_rows).all()
     
     output = io.StringIO()
     writer = csv.writer(output)
@@ -460,6 +484,7 @@ def export_grades(assignment_id):
     response = make_response(output.getvalue())
     response.headers["Content-Disposition"] = f"attachment; filename=grades_{assignment_id}.csv"
     response.headers["Content-type"] = "text/csv"
+    log_action("assignment_grades_exported", "Assignment", assignment_id, {"max_rows": max_rows})
     return response
 
 
@@ -470,10 +495,11 @@ def export_grades(assignment_id):
 @role_required("teacher")
 def view_gradebook(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
         
-    students = db.session.query(User).join(Enrollment, Enrollment.user_id == User.id).filter(Enrollment.course_id == course_id).all()
+    max_rows = _export_max_rows()
+    students = db.session.query(User).join(Enrollment, Enrollment.user_id == User.id).filter(Enrollment.course_id == course_id).limit(max_rows).all()
     quizzes = db.session.query(Quiz).filter_by(course_id=course_id, is_published=True).all()
     assignments = db.session.query(Assignment).filter_by(course_id=course_id).all()
     
@@ -503,7 +529,7 @@ def view_gradebook(course_id):
 @role_required("teacher")
 def export_gradebook(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id: return redirect(url_for("teacher.manage_courses"))
+    if not course or course.teacher_id != current_user.id or course.is_deleted: return redirect(url_for("teacher.manage_courses"))
     
     students = db.session.query(User).join(Enrollment, Enrollment.user_id == User.id).filter(Enrollment.course_id == course_id).all()
     quizzes = db.session.query(Quiz).filter_by(course_id=course_id, is_published=True).all()
@@ -545,6 +571,7 @@ def export_gradebook(course_id):
     response = make_response(output.getvalue())
     response.headers["Content-Disposition"] = f"attachment; filename=gradebook_{course_id}.csv"
     response.headers["Content-type"] = "text/csv"
+    log_action("gradebook_exported", "Course", course_id, {"max_rows": max_rows})
     return response
 
 
@@ -553,7 +580,7 @@ def export_gradebook(course_id):
 @role_required("teacher")
 def course_analytics(course_id):
     course = db.session.get(Course, course_id)
-    if not course or course.teacher_id != current_user.id:
+    if not course or course.teacher_id != current_user.id or course.is_deleted:
         return redirect(url_for("teacher.manage_courses"))
         
     from ..models import LearningLog, QuizAttempt

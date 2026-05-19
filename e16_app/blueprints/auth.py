@@ -67,6 +67,8 @@ def oauth_authorize(name):
     db.session.commit()
 
     login_user(user)
+    from ..services.audit import log_action
+    log_action("login_success", "User", user.id, {"email": email, "method": f"oauth_{name}"})
     logger.log(f"login_oauth_{name}", user_id=user.id, user_email=user.email, metadata={"method": name})
     flash(f"Chào mừng {email}!", "success")
     return redirect(url_for("auth.home"))
@@ -112,6 +114,8 @@ def register():
         user = User(email=email, password_hash=generate_password_hash(password), role=role, phone=phone)
         db.session.add(user)
         db.session.commit()
+        from ..services.audit import log_action
+        log_action("user_registered", "User", user.id, {"email": email, "role": role})
         logger.log("register", user_id=user.id, user_email=user.email, metadata={"role": role})
         flash("Đăng ký thành công. Mời đăng nhập.", "success")
         return redirect(url_for("auth.login"))
@@ -128,15 +132,21 @@ def login():
         password = request.form.get("password", "")
         user = db.session.query(User).filter(User.email == email).first()
         if not user or not check_password_hash(user.password_hash, password):
+            from ..services.audit import log_action
+            log_action("login_failed", "User", user.id if user else None, {"email": email})
             flash("Email hoặc mật khẩu không chính xác.", "error")
             return redirect(url_for("auth.login"))
         if not user.is_active:
+            from ..services.audit import log_action
+            log_action("login_failed_inactive", "User", user.id, {"email": email})
             flash("Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ Admin.", "error")
             return redirect(url_for("auth.login"))
         user.last_login = _utcnow()
         user.login_count = (user.login_count or 0) + 1
         db.session.commit()
         login_user(user)
+        from ..services.audit import log_action
+        log_action("login_success", "User", user.id, {"email": email, "method": "email"})
         logger.log("login", user_id=user.id, user_email=user.email, metadata={"method": "email"})
         return redirect(url_for("auth.home"))
     return render_template("login.html")

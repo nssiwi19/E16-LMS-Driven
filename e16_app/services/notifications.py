@@ -1,6 +1,6 @@
-from datetime import datetime
 from ..extensions import db
 from ..models import Notification
+from ..time_utils import utcnow
 
 def notify(user_id, type, message, link=None):
     """
@@ -12,7 +12,7 @@ def notify(user_id, type, message, link=None):
         type=type,
         message=message,
         link=link,
-        created_at=datetime.utcnow()
+        created_at=utcnow()
     )
     db.session.add(notification)
     db.session.commit()

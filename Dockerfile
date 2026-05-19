@@ -29,6 +29,7 @@ COPY . .
 
 # Create non-root system user and set permissions
 RUN groupadd -r e16user && useradd -r -g e16user e16user && \
+    chmod +x entrypoint.sh && \
     chown -R e16user:e16user /app
 
 # Run container as non-root user for CVE mitigation
@@ -40,5 +41,4 @@ ENV FLASK_APP=app.py
 EXPOSE 5000
 
 # Entrypoint script for DB migrations + Gunicorn startup
-RUN chmod +x entrypoint.sh
 CMD ["./entrypoint.sh"]
