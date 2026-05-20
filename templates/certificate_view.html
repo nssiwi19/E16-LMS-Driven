@@ -121,7 +121,7 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ csp_nonce() }}">
         function copyLink() {
             const url = window.location.href;
             navigator.clipboard.writeText(url).then(() => {

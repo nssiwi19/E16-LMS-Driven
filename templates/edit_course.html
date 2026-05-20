@@ -34,6 +34,21 @@
       <label>Ảnh bìa (URL)</label>
       <input type="url" name="cover_image_url" value="{{ course.cover_image_url }}">
     </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Tags (phân cách bằng dấu phẩy)</label>
+        <input type="text" name="tags" value="{{ course.tags }}" placeholder="Python, Data Science, AI">
+      </div>
+      <div class="form-group">
+        <label>Cấp độ</label>
+        <select name="level">
+          <option value="" {% if not course.level %}selected{% endif %}>-- Chưa chọn --</option>
+          <option value="Beginner" {% if course.level == 'Beginner' %}selected{% endif %}>🟢 Beginner</option>
+          <option value="Intermediate" {% if course.level == 'Intermediate' %}selected{% endif %}>🟡 Intermediate</option>
+          <option value="Advanced" {% if course.level == 'Advanced' %}selected{% endif %}>🔴 Advanced</option>
+        </select>
+      </div>
+    </div>
     <div style="display: flex; gap: 12px; margin-top: 20px;">
       <button type="submit" class="btn btn-primary" style="flex: 1;">Lưu thay đổi</button>
       <a href="{{ url_for('teacher.manage_courses') }}" class="btn btn-outline" style="flex: 1; text-align: center;">Hủy</a>

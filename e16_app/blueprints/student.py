@@ -27,6 +27,8 @@ def _mask_email(email: str) -> str:
 def list_courses():
     query_str = request.args.get("q", "").strip()
     cat_slug = request.args.get("cat", "").strip()
+    level_filter = request.args.get("level", "").strip()
+    tag_filter = request.args.get("tag", "").strip()
     
     courses_query = db.session.query(Course).filter(Course.status == "published", Course.is_deleted == False)
     
@@ -36,8 +38,20 @@ def list_courses():
     if cat_slug:
         courses_query = courses_query.join(Category).filter(Category.slug == cat_slug)
     
+    if level_filter:
+        courses_query = courses_query.filter(Course.level == level_filter)
+
+    if tag_filter:
+        courses_query = courses_query.filter(Course.tags.ilike(f"%{tag_filter}%"))
+    
     courses = courses_query.order_by(Course.created_at.desc()).all()
     categories = db.session.query(Category).all()
+    
+    # Collect unique tags for filter dropdown
+    all_tags_raw = db.session.query(Course.tags).filter(
+        Course.status == "published", Course.is_deleted == False, Course.tags != ""
+    ).all()
+    unique_tags = sorted({t.strip() for row in all_tags_raw for t in (row.tags or "").split(",") if t.strip()})
     
     enrolled_course_ids = set()
     if current_user.is_authenticated:
@@ -51,7 +65,10 @@ def list_courses():
         categories=categories, 
         query=query_str, 
         cat_slug=cat_slug,
-        enrolled_course_ids=enrolled_course_ids
+        enrolled_course_ids=enrolled_course_ids,
+        level_filter=level_filter,
+        tag_filter=tag_filter,
+        unique_tags=unique_tags
     )
 
 

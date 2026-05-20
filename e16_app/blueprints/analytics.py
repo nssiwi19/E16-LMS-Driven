@@ -52,6 +52,12 @@ def dashboard():
         func.count(Enrollment.id).label('enroll_count')
     ).join(Enrollment).filter(Course.is_deleted == False).group_by(Course.id).order_by(func.count(Enrollment.id).desc()).limit(5).all()
     
+    # Level Distribution (Doughnut Chart)
+    level_dist = db.session.query(
+        Course.level,
+        func.count(Course.id).label('count')
+    ).filter(Course.status == "published", Course.is_deleted == False, Course.level != "").group_by(Course.level).all()
+    
     return render_template(
         "admin_analytics.html",
         range=days,
@@ -63,7 +69,8 @@ def dashboard():
         today_logs=today_logs,
         user_growth=user_growth,
         enroll_trend=enroll_trend,
-        top_courses=top_courses
+        top_courses=top_courses,
+        level_dist=level_dist
     )
 
 @bp.route("/export")

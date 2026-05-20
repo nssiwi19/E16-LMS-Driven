@@ -124,7 +124,7 @@
 </div>
 
 {% if selected_lesson.id not in completed_ids %}
-<script>
+<script nonce="{{ csp_nonce() }}">
   (function() {
     const REQUIRED_SECONDS = 90;
     let remaining = REQUIRED_SECONDS;

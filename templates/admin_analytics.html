@@ -55,7 +55,16 @@
     <h2 style="margin-bottom: 24px;">Top 5 Khóa học</h2>
     <canvas id="topCoursesChart"></canvas>
   </section>
-  
+
+  <section class="card">
+    <h2 style="margin-bottom: 24px;">Phân bổ cấp độ khóa học</h2>
+    <div style="max-width: 280px; margin: 0 auto;">
+      <canvas id="levelDistChart"></canvas>
+    </div>
+  </section>
+</div>
+
+<div style="margin-top: 32px;">
   <section class="card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px;">
     <h2 style="margin-bottom: 16px; font-weight: 700; color: #fff;">Xuất dữ liệu hệ thống (BI & Analyst)</h2>
     <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 0.95rem; max-width: 420px;">
@@ -83,8 +92,8 @@
   </section>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+<script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script nonce="{{ csp_nonce() }}">
   // User Growth Chart
   new Chart(document.getElementById('userGrowthChart').getContext('2d'), {
     type: 'line',
@@ -152,5 +161,34 @@
       }
     }
   });
+
+  // Level Distribution Chart (Doughnut)
+  const levelLabels = {{ level_dist | map(attribute='level') | list | tojson }};
+  const levelCounts = {{ level_dist | map(attribute='count') | list | tojson }};
+  const levelColors = levelLabels.map(l => {
+    if (l === 'Beginner') return 'rgba(34, 197, 94, 0.8)';
+    if (l === 'Intermediate') return 'rgba(250, 204, 21, 0.8)';
+    if (l === 'Advanced') return 'rgba(239, 68, 68, 0.8)';
+    return 'rgba(148, 163, 184, 0.6)';
+  });
+  if (levelLabels.length > 0) {
+    new Chart(document.getElementById('levelDistChart').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: levelLabels,
+        datasets: [{
+          data: levelCounts,
+          backgroundColor: levelColors,
+          borderWidth: 2,
+          borderColor: 'rgba(0,0,0,0.2)'
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#ccc', padding: 16 } }
+        }
+      }
+    });
+  }
 </script>
 {% endblock %}

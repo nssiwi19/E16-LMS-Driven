@@ -56,6 +56,8 @@ class Course(db.Model):
     submitted_at = db.Column(db.DateTime)
     published_at = db.Column(db.DateTime)
     price = db.Column(db.Integer, default=250000, nullable=False)
+    tags = db.Column(db.String(500), default="", nullable=False)  # Comma-separated: "Python,Data,AI"
+    level = db.Column(db.String(20), default="", nullable=False)  # Beginner, Intermediate, Advanced
     created_at = db.Column(db.DateTime, default=_utcnow, nullable=False)
 
 

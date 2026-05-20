@@ -189,7 +189,7 @@
   <p style="color: var(--text-muted); font-size: 0.85rem;">Vui lòng giữ nguyên màn hình.</p>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   // Expiration Clock
   let timeLeft = {{ seconds_left }};
   const clockElement = document.getElementById('countdown-clock');

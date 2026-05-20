@@ -50,6 +50,16 @@ def create_app():
                     db.session.commit()
                 except Exception as ex:
                     app.logger.warning(f"Self-healing courses table column migration failed: {str(ex)}")
+            # Self-healing: tags & level columns
+            for col_name, col_type, col_default in [("tags", "VARCHAR(500)", "''"), ("level", "VARCHAR(20)", "''")]:
+                try:
+                    db.session.execute(text(f"SELECT {col_name} FROM courses LIMIT 1"))
+                except Exception:
+                    try:
+                        db.session.execute(text(f"ALTER TABLE courses ADD COLUMN {col_name} {col_type} DEFAULT {col_default}"))
+                        db.session.commit()
+                    except Exception as ex:
+                        app.logger.warning(f"Self-healing courses.{col_name} migration failed: {str(ex)}")
             from .models import SystemSetting
             default_settings = [
                 {"key": "site_name", "value": "E16 LMS", "description": "Tên hệ thống"},
@@ -280,6 +290,13 @@ def _register_cli(app):
         from .blueprints.auth import _run_seed
         result = _run_seed(seed_password)
         click.echo(result)
+
+    @app.cli.command("check-deadlines")
+    def check_deadlines_command():
+        """Scan upcoming deadlines and send reminder notifications (24h & 1h)."""
+        from .services.deadline_reminder import check_and_notify_deadlines
+        count = check_and_notify_deadlines()
+        click.echo(f"Deadline check complete. {count} notification(s) processed.")
 
 
 @login_manager.user_loader

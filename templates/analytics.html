@@ -36,7 +36,7 @@
     <canvas id="chart-{{ stat.course.id }}"></canvas>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     new Chart(document.getElementById('chart-{{ stat.course.id }}'), {
       type: 'bar',
       data: {

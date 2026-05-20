@@ -46,7 +46,7 @@
 </div>
 
 {% if quiz.time_limit and quiz.time_limit > 0 %}
-<script>
+<script nonce="{{ csp_nonce() }}">
   let totalSeconds = {{ quiz.time_limit * 60 }};
   const timerElement = document.getElementById('timer');
   const quizForm = document.getElementById('quizForm');

@@ -89,6 +89,8 @@ def edit_course(course_id):
         course.cover_image_url = request.form.get("cover_image_url")
         # Note: status is managed by submit_course or admin approve/reject
         course.category_id = request.form.get("category_id")
+        course.tags = request.form.get("tags", "").strip()
+        course.level = request.form.get("level", "").strip()
         db.session.commit()
         flash("Đã cập nhật thông tin khóa học.", "success")
         return redirect(url_for("teacher.manage_courses"))

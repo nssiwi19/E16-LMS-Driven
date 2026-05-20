@@ -4,6 +4,12 @@ Scaled Database Seeder for E16 LMS Scenario & Edge Cases.
 Scales up database size by 100x while strictly preserving the 11 core scenario users,
 distributing all entities and actions dynamically across the last 90 days.
 Generates realistic, sequential, start-to-complete learning logs for students.
+
+Enhancements (v2):
+ - Phone numbers for all users
+ - created_at < last_login strictly enforced for every user
+ - Tags and levels for all courses
+ - Self-healing column migration for tags/level columns
 """
 import os
 import sys
@@ -18,13 +24,75 @@ from e16_app.models import (
     User, Course, Lesson, Enrollment, Quiz, Question, Choice, QuizAttempt, LearningLog, Certificate
 )
 
+# Vietnamese phone number prefixes
+VN_PREFIXES = ['09', '03', '07', '08', '05']
+
+def _random_phone():
+    prefix = random.choice(VN_PREFIXES)
+    return prefix + ''.join(random.choices('0123456789', k=8))
+
+
+# Tag pools & levels
+TAG_POOLS = {
+    "Python for Data": "Python,Data Science",
+    "SQL Fundamentals": "SQL,Database",
+    "Data Viz (Draft)": "Data,Visualization",
+    "Statistics Basics": "Statistics,Math",
+    "Deleted Course": "Archived",
+    "Teacher B Course": "General",
+    "Javascript Essentials": "JavaScript,Web",
+    "HTML5 & CSS3 Responsive": "HTML,CSS,Web",
+    "React Native Mobile Dev": "React,Mobile",
+    "DevOps and CI/CD Pipelines": "DevOps,CI/CD",
+    "Docker & Kubernetes Containerization": "Docker,Kubernetes,DevOps",
+    "Node.js Backend Architecture": "Node.js,Backend",
+    "Machine Learning with Scikit-Learn": "Machine Learning,Python,AI",
+    "Deep Learning & PyTorch Basics": "Deep Learning,PyTorch,AI",
+    "Data Analysis with Pandas": "Python,Data,Pandas",
+    "Excel for Business Intelligence": "Excel,BI",
+    "Product Management Fundamentals": "Product Management,Business",
+    "Agile & Scrum Practices": "Agile,Scrum",
+    "SEO & Content Marketing Strategy": "SEO,Marketing",
+    "Facebook Ads Mastery": "Marketing,Ads",
+    "Google Analytics 4 Overview": "Analytics,Google",
+    "Cybersecurity Essentials": "Cybersecurity,Security",
+    "Ethical Hacking Foundations": "Hacking,Security",
+    "AWS Cloud Practitioner Prep": "AWS,Cloud",
+    "PostgreSQL Advanced Performance": "PostgreSQL,Database",
+    "MongoDB & NoSQL Databases": "MongoDB,NoSQL,Database",
+    "Rust Programming Fundamentals": "Rust,Systems",
+    "Go Web Development": "Go,Backend,Web",
+    "SwiftUI iOS Development": "Swift,iOS,Mobile",
+    "UI/UX Figma Design Mastery": "UI/UX,Design,Figma",
+}
+
+LEVELS = ['Beginner', 'Intermediate', 'Advanced']
+
+
 def run_scaled_seed():
     app = create_app()
     with app.app_context():
-        print("[*] Bat dau nap du lieu mau quy mo lon (100x Scaled) cho E16 LMS...")
+        print("[*] Bat dau nap du lieu mau quy mo lon (100x Scaled v2) cho E16 LMS...")
         
         # 1. Tao bang neu chua ton tai
         db.create_all()
+
+        # Self-healing: add tags/level columns if missing (SQLite)
+        from sqlalchemy import text
+        for col_name, col_type, col_default in [
+            ("tags", "VARCHAR(500)", "''"),
+            ("level", "VARCHAR(20)", "''"),
+        ]:
+            try:
+                db.session.execute(text(f"SELECT {col_name} FROM courses LIMIT 1"))
+            except Exception:
+                try:
+                    db.session.execute(text(f"ALTER TABLE courses ADD COLUMN {col_name} {col_type} DEFAULT {col_default}"))
+                    db.session.commit()
+                    print(f"[+] Da them cot '{col_name}' vao bang courses.")
+                except Exception as ex:
+                    db.session.rollback()
+                    print(f"[-] Khong the them cot '{col_name}': {ex}")
 
         print("[*] Dang don dep du lieu cu de tranh trung lap...")
         try:
@@ -52,17 +120,28 @@ def run_scaled_seed():
         # ==========================================
         print("[*] Dang tao 11 nguoi dung kich ban loi...")
         users = [
-            User(id='u-admin', email='admin@e16.local', password_hash=pwd_hash, role='admin', created_at=now - timedelta(days=90), login_count=42, last_login=now),
-            User(id='u-ta', email='teacher_a@e16.local', password_hash=pwd_hash, role='teacher', created_at=now - timedelta(days=80), login_count=18, last_login=now),
-            User(id='u-tb', email='teacher_b@e16.local', password_hash=pwd_hash, role='teacher', created_at=now - timedelta(days=75), login_count=12, last_login=now),
-            User(id='u-s1', email='student_1@e16.local', password_hash=pwd_hash, role='student', created_at=now - timedelta(days=60), login_count=30, last_login=now),
-            User(id='u-s2', email='student_2@e16.local', password_hash=pwd_hash, role='student', created_at=now - timedelta(days=55), login_count=15, last_login=now),
-            User(id='u-s3', email='student_3@e16.local', password_hash=pwd_hash, role='student', created_at=now - timedelta(days=50), login_count=10, last_login=now),
-            User(id='u-s4', email='student_4@e16.local', password_hash=pwd_hash, role='student', created_at=now - timedelta(days=45), login_count=8, last_login=now),
-            User(id='u-sd', email='student_done@e16.local', password_hash=pwd_hash, role='student', created_at=now - timedelta(days=70), login_count=50, last_login=now - timedelta(days=5)),
-            User(id='u-s5', email='student_5@e16.local', password_hash=pwd_hash, role='student', created_at=now - timedelta(days=10), login_count=2, last_login=now),
-            User(id='u-snr', email='student_notenrolled@e16.local', password_hash=pwd_hash, role='student', created_at=now - timedelta(days=5), login_count=1, last_login=now),
-            User(id='u-inactive', email='inactive@e16.local', password_hash=pwd_hash, role='student', created_at=now - timedelta(days=30), login_count=3, last_login=now - timedelta(days=30), is_active=False),
+            User(id='u-admin', email='admin@e16.local', password_hash=pwd_hash, role='admin',
+                 phone='0988000001', created_at=now - timedelta(days=90), login_count=42, last_login=now - timedelta(days=1)),
+            User(id='u-ta', email='teacher_a@e16.local', password_hash=pwd_hash, role='teacher',
+                 phone='0988000002', created_at=now - timedelta(days=80), login_count=18, last_login=now - timedelta(days=2)),
+            User(id='u-tb', email='teacher_b@e16.local', password_hash=pwd_hash, role='teacher',
+                 phone='0988000003', created_at=now - timedelta(days=75), login_count=12, last_login=now - timedelta(days=3)),
+            User(id='u-s1', email='student_1@e16.local', password_hash=pwd_hash, role='student',
+                 phone='0988000004', created_at=now - timedelta(days=60), login_count=30, last_login=now - timedelta(days=1)),
+            User(id='u-s2', email='student_2@e16.local', password_hash=pwd_hash, role='student',
+                 phone='0988000005', created_at=now - timedelta(days=55), login_count=15, last_login=now - timedelta(days=4)),
+            User(id='u-s3', email='student_3@e16.local', password_hash=pwd_hash, role='student',
+                 phone='0988000006', created_at=now - timedelta(days=50), login_count=10, last_login=now - timedelta(days=5)),
+            User(id='u-s4', email='student_4@e16.local', password_hash=pwd_hash, role='student',
+                 phone='0988000007', created_at=now - timedelta(days=45), login_count=8, last_login=now - timedelta(days=6)),
+            User(id='u-sd', email='student_done@e16.local', password_hash=pwd_hash, role='student',
+                 phone='0988000008', created_at=now - timedelta(days=70), login_count=50, last_login=now - timedelta(days=5)),
+            User(id='u-s5', email='student_5@e16.local', password_hash=pwd_hash, role='student',
+                 phone='0988000009', created_at=now - timedelta(days=10), login_count=2, last_login=now - timedelta(days=1)),
+            User(id='u-snr', email='student_notenrolled@e16.local', password_hash=pwd_hash, role='student',
+                 phone='0988000010', created_at=now - timedelta(days=5), login_count=1, last_login=now - timedelta(days=1)),
+            User(id='u-inactive', email='inactive@e16.local', password_hash=pwd_hash, role='student',
+                 phone='0988000011', created_at=now - timedelta(days=30), login_count=3, last_login=now - timedelta(days=29), is_active=False),
         ]
         db.session.add_all(users)
         db.session.commit()
@@ -72,21 +151,27 @@ def run_scaled_seed():
         # ==========================================
         print("[*] Dang tao 1100 hoc vien ngau nhien (Phan bo 90 ngay)...")
         scaled_users = []
-        # Create an increasing registration pattern over the last 90 days (exponential growth)
         for i in range(1100):
-            # Squaring a random float pushes the distribution towards recent days (growth curve!)
-            days_ago = int(90 * (random.random() ** 1.5))
+            # Spread registration dates evenly across 90 days (with slight exponential bias toward recent)
+            days_ago = int(90 * (random.random() ** 1.3))
             reg_time = now - timedelta(days=days_ago, hours=random.randint(0, 23), minutes=random.randint(0, 59))
             
             uid = f"u-gen-{i}"
             email = f"student_gen_{i}@e16.local"
-            last_log = reg_time + timedelta(days=random.randint(0, max(0, (now - reg_time).days)))
+            
+            # last_login MUST be strictly after created_at
+            days_since_reg = max(1, (now - reg_time).days)
+            login_offset_days = random.randint(1, days_since_reg)
+            last_log = reg_time + timedelta(days=login_offset_days, hours=random.randint(0, 12))
+            if last_log > now:
+                last_log = now - timedelta(hours=random.randint(1, 6))
             
             scaled_users.append(User(
                 id=uid,
                 email=email,
                 password_hash=pwd_hash,
                 role='student',
+                phone=_random_phone(),
                 created_at=reg_time,
                 login_count=random.randint(1, 40),
                 last_login=last_log,
@@ -101,12 +186,12 @@ def run_scaled_seed():
         # ==========================================
         print("[*] Dang tao 6 khoa hoc kich ban...")
         courses = [
-            Course(id='c-py', title='Python for Data', description='Khoa hoc Python co ban den nang cao.', cover_image_url='/static/img/course_python.jpg', total_lessons=8, teacher_id='u-ta', created_at=now - timedelta(days=80), status='published'),
-            Course(id='c-sql', title='SQL Fundamentals', description='Truy van du lieu voi PostgreSQL.', cover_image_url='/static/img/course_sql.jpg', total_lessons=6, teacher_id='u-ta', created_at=now - timedelta(days=70), status='published'),
-            Course(id='c-draft', title='Data Viz (Draft)', description='Dang soan thao, chua publish.', cover_image_url='/static/img/placeholder.jpg', total_lessons=0, teacher_id='u-ta', created_at=now - timedelta(days=10), status='draft'),
-            Course(id='c-pend', title='Statistics Basics', description='Cho admin duyet.', cover_image_url='/static/img/placeholder.jpg', total_lessons=5, teacher_id='u-tb', created_at=now - timedelta(days=5), status='pending_review'),
-            Course(id='c-del', title='Deleted Course', description='Khoa hoc da bi xoa mem.', cover_image_url='/static/img/placeholder.jpg', total_lessons=3, teacher_id='u-tb', created_at=now - timedelta(days=60), status='archived', is_deleted=True),
-            Course(id='c-tb', title='Teacher B Course', description='Khoa hoc cua teacher B.', cover_image_url='/static/img/placeholder.jpg', total_lessons=4, teacher_id='u-tb', created_at=now - timedelta(days=40), status='published'),
+            Course(id='c-py', title='Python for Data', description='Khoa hoc Python co ban den nang cao.', cover_image_url='/static/img/course_python.jpg', total_lessons=8, teacher_id='u-ta', created_at=now - timedelta(days=80), status='published', tags='Python,Data Science', level='Beginner'),
+            Course(id='c-sql', title='SQL Fundamentals', description='Truy van du lieu voi PostgreSQL.', cover_image_url='/static/img/course_sql.jpg', total_lessons=6, teacher_id='u-ta', created_at=now - timedelta(days=70), status='published', tags='SQL,Database', level='Beginner'),
+            Course(id='c-draft', title='Data Viz (Draft)', description='Dang soan thao, chua publish.', cover_image_url='/static/img/placeholder.jpg', total_lessons=0, teacher_id='u-ta', created_at=now - timedelta(days=10), status='draft', tags='Data,Visualization', level='Intermediate'),
+            Course(id='c-pend', title='Statistics Basics', description='Cho admin duyet.', cover_image_url='/static/img/placeholder.jpg', total_lessons=5, teacher_id='u-tb', created_at=now - timedelta(days=5), status='pending_review', tags='Statistics,Math', level='Beginner'),
+            Course(id='c-del', title='Deleted Course', description='Khoa hoc da bi xoa mem.', cover_image_url='/static/img/placeholder.jpg', total_lessons=3, teacher_id='u-tb', created_at=now - timedelta(days=60), status='archived', is_deleted=True, tags='Archived', level=''),
+            Course(id='c-tb', title='Teacher B Course', description='Khoa hoc cua teacher B.', cover_image_url='/static/img/placeholder.jpg', total_lessons=4, teacher_id='u-tb', created_at=now - timedelta(days=40), status='published', tags='General', level='Intermediate'),
         ]
         db.session.add_all(courses)
         db.session.commit()
@@ -134,6 +219,9 @@ def run_scaled_seed():
             teacher = 'u-ta' if idx % 2 == 0 else 'u-tb'
             total_l = random.randint(5, 12)
             
+            tags = TAG_POOLS.get(topic, "General")
+            level = LEVELS[idx % 3]
+            
             scaled_courses.append(Course(
                 id=cid,
                 title=topic,
@@ -142,7 +230,9 @@ def run_scaled_seed():
                 total_lessons=total_l,
                 teacher_id=teacher,
                 created_at=c_created,
-                status='published'
+                status='published',
+                tags=tags,
+                level=level
             ))
         db.session.add_all(scaled_courses)
         db.session.commit()
@@ -403,11 +493,6 @@ def run_scaled_seed():
         ]
 
         # Generate realistic sequential logs for scaled active/completed enrollments
-        # To comply with sequential start/complete logs:
-        # For each student's enrollment in a course:
-        # - They start and complete Lesson 1, then Lesson 2, etc.
-        # - Complete action time is always > start action time.
-        # - Logs are spread sequentially across days.
         log_index = 0
         for e in scaled_enrollments:
             if e.status in ['active', 'completed']:
@@ -452,7 +537,7 @@ def run_scaled_seed():
         db.session.commit()
         print(f"[+] Da tao {len(logs)} nhat ky hoc tap tuan tu (Learning Logs).")
 
-        print("\n[+] HOAN THANH NAP QUY MO DU LIEU (100x SCALED) THANH CONG!")
+        print("\n[+] HOAN THANH NAP QUY MO DU LIEU (100x SCALED v2) THANH CONG!")
         print("-----------------------------------------------------------------")
         print("Quy mo du lieu moi:")
         print(f"- Nguoi dung:       {db.session.query(User).count()} (Hoc vien bo sung: 1100)")
@@ -462,7 +547,8 @@ def run_scaled_seed():
         print(f"- Nhat ky hoc tap:  {db.session.query(LearningLog).count()} logs")
         print(f"- Chung chi:        {db.session.query(Certificate).count()} chung chi cap ra")
         print("-----------------------------------------------------------------")
-        print("Luu y: Tat ca 11 tai khoan kich ban goc van duoc giu nguyen ven.")
+        print("Tat ca 11 tai khoan kich ban goc van duoc giu nguyen ven.")
+        print("Tat ca user deu co so dien thoai (phone) va created_at < last_login.")
         print("-----------------------------------------------------------------")
 
 if __name__ == "__main__":

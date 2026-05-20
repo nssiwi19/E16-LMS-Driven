@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
     <div class="bg-orb orb-1"></div>
@@ -107,7 +107,7 @@
       </main>
     </div>
 
-    <script>
+    <script nonce="{{ csp_nonce() }}">
       // Flash messages auto-hide
       setTimeout(() => {
         document.querySelectorAll('.flash').forEach(el => {
