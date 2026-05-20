@@ -21,3 +21,5 @@ websockets
 Flask-Limiter
 boto3
 flask-talisman
+redis
+structlog

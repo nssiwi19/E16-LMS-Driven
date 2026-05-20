@@ -269,34 +269,9 @@ def create_app():
 
 def _register_cli(app):
     """Register custom Flask CLI commands."""
-    import click
+    from .cli import init_app as init_cli
 
-    @app.cli.command("seed")
-    @click.option("--key", default=None, help="Seed password (or set E16_SEED_PASSWORD env)")
-    def seed_command(key):
-        """Seed the database with demo data. Blocked in production."""
-        import os as _os
-        import sys
-
-        app_env = _os.getenv("APP_ENV", _os.getenv("FLASK_ENV", "production")).lower()
-        if app_env == "production":
-            click.echo("ERROR: Seeding is blocked in production environment (APP_ENV=production).", err=True)
-            click.echo("Set APP_ENV=development to run seed.", err=True)
-            sys.exit(1)
-
-        seed_password = key or _os.getenv("E16_SEED_PASSWORD") or "demo-password"
-
-        # Re-use existing seed logic from auth blueprint
-        from .blueprints.auth import _run_seed
-        result = _run_seed(seed_password)
-        click.echo(result)
-
-    @app.cli.command("check-deadlines")
-    def check_deadlines_command():
-        """Scan upcoming deadlines and send reminder notifications (24h & 1h)."""
-        from .services.deadline_reminder import check_and_notify_deadlines
-        count = check_and_notify_deadlines()
-        click.echo(f"Deadline check complete. {count} notification(s) processed.")
+    init_cli(app)
 
 
 @login_manager.user_loader

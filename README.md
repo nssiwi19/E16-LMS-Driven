@@ -57,7 +57,9 @@ flask run --debug
 Seed dữ liệu demo chỉ nên chạy trong development:
 
 ```bash
-flask seed
+flask seed --scenario basic --size 100
+# Other scenarios: scaled, comprehensive, complex, learning, quiz
+# For protected seed passwords: flask seed --scenario basic --key "$E16_SEED_PASSWORD"
 ```
 
 Hoặc đăng nhập Admin và vào `/admin/seed` khi `APP_ENV=development`.

@@ -1,9 +1,8 @@
 __pycache__/
 *.pyc
-instance/*.db
-instance/*.pre_migration_backup
+instance/
+scratch/
 *.sqlite3
 *.csv
 .env
 .pytest_cache/
-scripts/
