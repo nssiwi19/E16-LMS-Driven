@@ -234,3 +234,66 @@ def hide_reply(course_id, reply_id):
     log_action("forum_reply_hidden", "ForumReply", reply.id, {"course_id": course_id, "thread_id": thread.id})
     flash("Đã ẩn phản hồi.", "success")
     return redirect(url_for("communication.view_thread", course_id=course_id, thread_id=thread.id))
+
+
+@bp.post("/courses/<course_id>/forum/<thread_id>/report")
+@login_required
+def report_thread(course_id, thread_id):
+    course = db.session.get(Course, course_id)
+    if not _can_access_course(course):
+        flash("Bạn không có quyền báo cáo trong khóa học này.", "error")
+        return redirect(url_for("student.list_courses"))
+
+    thread = db.session.get(ForumThread, thread_id)
+    if not thread or thread.course_id != course_id or thread.is_hidden:
+        return redirect(url_for("communication.course_forum", course_id=course_id))
+
+    reason = request.form.get("reason", "Spam / Toxic")
+    detail = request.form.get("detail", "")
+
+    from ..models import ContentReport
+    report = ContentReport(
+        reporter_id=current_user.id,
+        target_type="thread",
+        target_id=thread_id,
+        reason=reason,
+        detail=detail
+    )
+    db.session.add(report)
+    db.session.commit()
+    
+    log_action("forum_thread_reported", "ForumThread", thread_id, {"reason": reason})
+    flash("Cảm ơn bạn. Báo cáo của bạn đã được gửi tới ban quản trị.", "success")
+    return redirect(url_for("communication.view_thread", course_id=course_id, thread_id=thread_id))
+
+
+@bp.post("/courses/<course_id>/forum/replies/<reply_id>/report")
+@login_required
+def report_reply(course_id, reply_id):
+    course = db.session.get(Course, course_id)
+    if not _can_access_course(course):
+        flash("Bạn không có quyền báo cáo trong khóa học này.", "error")
+        return redirect(url_for("student.list_courses"))
+
+    reply = db.session.get(ForumReply, reply_id)
+    thread = db.session.get(ForumThread, reply.thread_id) if reply else None
+    if not reply or not thread or thread.course_id != course_id or reply.is_hidden:
+        return redirect(url_for("communication.course_forum", course_id=course_id))
+
+    reason = request.form.get("reason", "Spam / Toxic")
+    detail = request.form.get("detail", "")
+
+    from ..models import ContentReport
+    report = ContentReport(
+        reporter_id=current_user.id,
+        target_type="reply",
+        target_id=reply_id,
+        reason=reason,
+        detail=detail
+    )
+    db.session.add(report)
+    db.session.commit()
+    
+    log_action("forum_reply_reported", "ForumReply", reply_id, {"reason": reason})
+    flash("Cảm ơn bạn. Báo cáo của bạn đã được gửi tới ban quản trị.", "success")
+    return redirect(url_for("communication.view_thread", course_id=course_id, thread_id=thread.id))

@@ -264,6 +264,11 @@ def create_app():
     # --- CLI commands ---
     _register_cli(app)
 
+    # --- Background worker thread (for local dev mode) ---
+    if app.config.get("RUN_BG_DAEMON"):
+        from .services.jobs import start_background_worker
+        start_background_worker(app)
+
     return app
 
 

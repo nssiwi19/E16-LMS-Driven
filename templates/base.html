@@ -69,6 +69,9 @@
             <a href="{{ url_for('admin.view_audit_log') }}" class="nav-item {% if request.endpoint == 'admin.view_audit_log' %}active{% endif %}">
               <span>Audit Log</span>
             </a>
+            <a href="{{ url_for('admin.list_reports') }}" class="nav-item {% if request.endpoint == 'admin.list_reports' %}active{% endif %}">
+              <span>Báo cáo nội dung</span>
+            </a>
           {% endif %}
         </nav>
         <div class="sidebar-footer">

@@ -259,3 +259,32 @@ class Submission(db.Model):
     feedback = db.Column(db.Text)
     graded_at = db.Column(db.DateTime, nullable=True)
     graded_by = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+
+class ContentReport(db.Model):
+    __tablename__ = "content_reports"
+    id = db.Column(db.String(36), primary_key=True, default=new_uuid)
+    reporter_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    target_type = db.Column(db.String(20), nullable=False)  # "thread" or "reply"
+    target_id = db.Column(db.String(36), nullable=False)
+    reason = db.Column(db.String(255), nullable=False)
+    detail = db.Column(db.Text, default="")
+    status = db.Column(db.String(20), default="pending", nullable=False, index=True)  # pending, resolved, dismissed
+    created_at = db.Column(db.DateTime, default=_utcnow, nullable=False)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+    resolved_by = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    action_taken = db.Column(db.String(50), nullable=True)  # "hidden", "dismissed"
+
+
+class BackgroundJob(db.Model):
+    __tablename__ = "background_jobs"
+    id = db.Column(db.String(36), primary_key=True, default=new_uuid)
+    task_name = db.Column(db.String(100), nullable=False)  # e.g., "send_announcement_email", "export_large_data"
+    payload = db.Column(db.Text, nullable=False)  # JSON-encoded payload
+    status = db.Column(db.String(20), default="pending", nullable=False, index=True)  # pending, running, completed, failed
+    attempts = db.Column(db.Integer, default=0, nullable=False)
+    max_attempts = db.Column(db.Integer, default=3, nullable=False)
+    error_message = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=_utcnow, nullable=False)
+    started_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)

@@ -7,6 +7,7 @@ load_dotenv()
 class Config:
     """Base config."""
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-change-me")
+    RUN_BG_DAEMON = os.environ.get("RUN_BG_DAEMON", "True") == "True"
     
     # Application Environment
     APP_ENV = os.environ.get("APP_ENV", os.environ.get("FLASK_ENV", "production")).lower()
@@ -65,6 +66,7 @@ class TestingConfig(Config):
     APP_ENV = "testing"
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     WTF_CSRF_ENABLED = False
+    RUN_BG_DAEMON = False
 
 config_dict = {
     "development": DevelopmentConfig,

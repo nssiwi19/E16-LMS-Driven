@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="top-header">
+  <div>
+    <h1>Quản lý báo cáo nội dung (Content Reports)</h1>
+    <p>Kiểm duyệt nội dung diễn đàn bị học viên báo cáo vi phạm.</p>
+  </div>
+</header>
+
+<!-- Filter Tabs -->
+<div style="display: flex; gap: 12px; margin-bottom: 24px;">
+  <a href="{{ url_for('admin.list_reports', status='pending') }}" class="btn {% if current_status == 'pending' %}btn-primary{% else %}btn-outline{% endif %} btn-sm">Chờ xử lý (Pending)</a>
+  <a href="{{ url_for('admin.list_reports', status='resolved') }}" class="btn {% if current_status == 'resolved' %}btn-primary{% else %}btn-outline{% endif %} btn-sm">Đã ẩn (Resolved)</a>
+  <a href="{{ url_for('admin.list_reports', status='dismissed') }}" class="btn {% if current_status == 'dismissed' %}btn-primary{% else %}btn-outline{% endif %} btn-sm">Đã bỏ qua (Dismissed)</a>
+</div>
+
+<div class="card" style="padding: 0; overflow-x: auto;">
+  {% if items %}
+    <table class="table" style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="text-align: left; background: var(--bg-soft); border-bottom: 1px solid var(--card-border);">
+          <th style="padding: 16px;">Thời gian</th>
+          <th style="padding: 16px;">Người báo cáo</th>
+          <th style="padding: 16px;">Nội dung bị báo cáo</th>
+          <th style="padding: 16px;">Lý do & Chi tiết</th>
+          <th style="padding: 16px; width: 220px;">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr style="border-bottom: 1px solid var(--card-border); font-size: 0.9rem;">
+            <td style="padding: 16px; white-space: nowrap;">
+              {{ item.report.created_at.strftime('%d/%m/%Y %H:%M') }}
+            </td>
+            <td style="padding: 16px;">
+              <strong>{{ item.reporter.email.split('@')[0] }}</strong>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">{{ item.reporter.email }}</div>
+            </td>
+            <td style="padding: 16px; max-width: 400px;">
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">
+                Loại: <span class="badge" style="background: rgba(255,255,255,0.05);">{{ 'Chủ đề (Thread)' if item.report.target_type == 'thread' else 'Phản hồi (Reply)' }}</span> 
+                • Đăng bởi: <strong>{{ item.target_author.split('@')[0] }}</strong>
+              </div>
+              <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid var(--card-border); white-space: pre-wrap; font-family: inherit; font-size: 0.85rem; max-height: 120px; overflow-y: auto;">{{ item.target_body }}</div>
+            </td>
+            <td style="padding: 16px; max-width: 300px;">
+              <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); font-weight: bold; padding: 4px 8px; border-radius: 4px;">{{ item.report.reason }}</span>
+              {% if item.report.detail %}
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px; line-height: 1.4;">{{ item.report.detail }}</div>
+              {% endif %}
+            </td>
+            <td style="padding: 16px; white-space: nowrap; vertical-align: middle;">
+              {% if item.report.status == 'pending' %}
+                <div style="display: flex; gap: 8px;">
+                  <form action="{{ url_for('admin.resolve_report', report_id=item.report.id, status=current_status) }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="hide">
+                    <button type="submit" class="btn btn-danger btn-sm" style="padding: 8px 12px; font-size: 0.8rem;">Ẩn nội dung</button>
+                  </form>
+                  <form action="{{ url_for('admin.resolve_report', report_id=item.report.id, status=current_status) }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="dismiss">
+                    <button type="submit" class="btn btn-outline btn-sm" style="padding: 8px 12px; font-size: 0.8rem;">Bỏ qua</button>
+                  </form>
+                </div>
+              {% else %}
+                <div style="font-size: 0.8rem; color: var(--text-muted);">
+                  Trạng thái: 
+                  {% if item.report.status == 'resolved' %}
+                    <span style="color: var(--success); font-weight: bold;">Đã ẩn</span> ({{ item.report.action_taken }})
+                  {% else %}
+                    <span style="color: var(--text-muted); font-weight: bold;">Đã bỏ qua</span>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div style="padding: 40px; text-align: center; color: var(--text-muted);">
+      <div style="font-size: 2.5rem; margin-bottom: 12px;">🎉</div>
+      <div>Không có báo cáo nội dung nào trong danh mục này!</div>
+    </div>
+  {% endif %}
+</div>
+
+{% if pagination and pagination.pages > 1 %}
+  <div class="actions" style="justify-content: center; margin-top: 16px;">
+    {% if pagination.has_prev %}
+      <a class="btn btn-outline btn-sm" href="{{ url_for('admin.list_reports', status=current_status, page=pagination.page - 1) }}">Trước</a>
+    {% endif %}
+    <span class="badge" style="background: rgba(255,255,255,0.1); color: var(--text-muted);">Trang {{ pagination.page }}/{{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+      <a class="btn btn-outline btn-sm" href="{{ url_for('admin.list_reports', status=current_status, page=pagination.page + 1) }}">Sau</a>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}

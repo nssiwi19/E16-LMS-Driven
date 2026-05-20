@@ -24,6 +24,22 @@ DEFAULT_ALLOWED_EXTENSIONS = {
 }
 
 
+# Chữ ký magic bytes cho các định dạng file phổ biến
+MAGIC_SIGNATURES = {
+    ".pdf": [b"%PDF"],
+    ".png": [b"\x89PNG\r\n\x1a\n"],
+    ".jpg": [b"\xff\xd8\xff"],
+    ".jpeg": [b"\xff\xd8\xff"],
+    ".zip": [b"PK\x03\x04"],
+    ".docx": [b"PK\x03\x04"],
+    ".xlsx": [b"PK\x03\x04"],
+    ".pptx": [b"PK\x03\x04"],
+    ".doc": [b"\xd0\xcf\x11\xe0"],
+    ".xls": [b"\xd0\xcf\x11\xe0"],
+    ".ppt": [b"\xd0\xcf\x11\xe0"],
+}
+
+
 def _allowed_extensions() -> set[str]:
     raw = os.getenv("UPLOAD_ALLOWED_EXTENSIONS")
     if not raw:
@@ -39,6 +55,53 @@ def _validate_upload(file) -> str:
     ext = os.path.splitext(filename)[1].lower()
     if ext not in _allowed_extensions():
         raise ValueError("Định dạng file không được hỗ trợ.")
+
+    # 1. Kiểm tra MIME type gửi kèm từ trình duyệt
+    import mimetypes
+    guessed_type, _ = mimetypes.guess_type(filename)
+    
+    allowed_mimes = []
+    if guessed_type:
+        allowed_mimes.append(guessed_type.lower())
+    
+    if ext in (".zip", ".docx", ".xlsx", ".pptx"):
+        allowed_mimes.extend([
+            "application/zip",
+            "application/x-zip-compressed",
+            "application/octet-stream",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        ])
+    elif ext in (".jpg", ".jpeg"):
+        allowed_mimes.extend(["image/jpeg", "image/pjpeg"])
+    elif ext == ".pdf":
+        allowed_mimes.extend(["application/pdf", "application/x-pdf"])
+
+    if file.content_type and allowed_mimes:
+        if file.content_type.lower() not in allowed_mimes and file.content_type.lower() != "application/octet-stream":
+            raise ValueError("MIME type không khớp với định dạng file.")
+
+    # 2. Đọc và xác thực magic bytes
+    try:
+        header = file.read(1024)
+        file.seek(0)  # Cực kỳ quan trọng: reset con trỏ file!
+    except Exception:
+        raise ValueError("Không thể đọc nội dung file để xác thực.")
+
+    if ext in MAGIC_SIGNATURES:
+        signatures = MAGIC_SIGNATURES[ext]
+        match = False
+        for sig in signatures:
+            if header.startswith(sig):
+                match = True
+                break
+        if not match:
+            raise ValueError("Nội dung file thực tế không khớp với phần mở rộng tệp.")
+    elif ext == ".txt":
+        # Đối với tệp text, đảm bảo không có ký tự null (dấu hiệu của tệp nhị phân)
+        if b"\x00" in header:
+            raise ValueError("File văn bản chứa ký tự không hợp lệ.")
 
     return ext
 

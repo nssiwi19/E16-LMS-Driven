@@ -6,3 +6,4 @@ scratch/
 *.csv
 .env
 .pytest_cache/
+backups/

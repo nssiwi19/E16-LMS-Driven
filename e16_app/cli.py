@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import time
 
 import click
 from flask.cli import with_appcontext
@@ -102,7 +103,27 @@ def check_deadlines_command():
     click.echo(f"Deadline check complete. {count} notification(s) processed.")
 
 
+@click.command("run-jobs")
+@click.option("--interval", default=5, type=int, help="Polling interval in seconds.")
+@with_appcontext
+def run_jobs_command(interval):
+    """Run dedicated background job worker loop (production mode)."""
+    from flask import current_app
+    from .services.jobs import run_pending_jobs
+    
+    click.echo(f"Starting E16 LMS background worker (polling every {interval}s)...")
+    app = current_app._get_current_object()
+    
+    try:
+        while True:
+            run_pending_jobs(app)
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        click.echo("Worker stopped by user.")
+
+
 def init_app(app):
     app.cli.add_command(create_admin_command)
     app.cli.add_command(seed_command)
     app.cli.add_command(check_deadlines_command)
+    app.cli.add_command(run_jobs_command)

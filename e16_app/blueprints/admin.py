@@ -426,3 +426,94 @@ def seed_system():
     flush_settings_cache()
     flash("Đã khởi tạo dữ liệu mẫu hệ thống thành công.", "success")
     return redirect(url_for("admin.view_settings"))
+
+
+@bp.route("/reports")
+@login_required
+@role_required("admin")
+def list_reports():
+    from ..models import ContentReport, User
+    page, per_page = get_pagination(default_per_page=20, max_per_page=100)
+    status_filter = request.args.get("status", "pending")
+    
+    query = db.session.query(ContentReport, User).join(User, User.id == ContentReport.reporter_id)
+    if status_filter:
+        query = query.filter(ContentReport.status == status_filter)
+        
+    query = query.order_by(ContentReport.created_at.desc())
+    pagination = paginate_query(query, page, per_page)
+    
+    enriched_items = []
+    from ..models import ForumThread, ForumReply
+    for report, reporter in pagination["items"]:
+        target_body = ""
+        target_author = ""
+        course_id = ""
+        if report.target_type == "thread":
+            thread = db.session.get(ForumThread, report.target_id)
+            if thread:
+                target_body = f"Chủ đề: {thread.title}\n\nNội dung: {thread.body}"
+                author = db.session.get(User, thread.author_id)
+                target_author = author.email if author else "Không rõ"
+                course_id = thread.course_id
+        elif report.target_type == "reply":
+            reply = db.session.get(ForumReply, report.target_id)
+            if reply:
+                target_body = reply.body
+                author = db.session.get(User, reply.author_id)
+                target_author = author.email if author else "Không rõ"
+                thread = db.session.get(ForumThread, reply.thread_id)
+                course_id = thread.course_id if thread else ""
+                
+        enriched_items.append({
+            "report": report,
+            "reporter": reporter,
+            "target_body": target_body,
+            "target_author": target_author,
+            "course_id": course_id
+        })
+        
+    return render_template(
+        "admin_reports.html",
+        items=enriched_items,
+        pagination=pagination,
+        current_status=status_filter
+    )
+
+
+@bp.post("/reports/<report_id>/resolve")
+@login_required
+@role_required("admin")
+def resolve_report(report_id):
+    from ..models import ContentReport, ForumThread, ForumReply
+    report = db.session.get(ContentReport, report_id)
+    if not report:
+        flash("Không tìm thấy báo cáo.", "error")
+        return redirect(url_for("admin.list_reports"))
+        
+    action = request.form.get("action")  # "hide" or "dismiss"
+    if action not in ("hide", "dismiss"):
+        flash("Hành động không hợp lệ.", "error")
+        return redirect(url_for("admin.list_reports"))
+        
+    report.status = "resolved" if action == "hide" else "dismissed"
+    report.resolved_at = utcnow()
+    report.resolved_by = current_user.id
+    report.action_taken = action
+    
+    if action == "hide":
+        if report.target_type == "thread":
+            thread = db.session.get(ForumThread, report.target_id)
+            if thread:
+                thread.is_hidden = True
+                log_action("forum_thread_hidden_by_report", "ForumThread", thread.id)
+        elif report.target_type == "reply":
+            reply = db.session.get(ForumReply, report.target_id)
+            if reply:
+                reply.is_hidden = True
+                log_action("forum_reply_hidden_by_report", "ForumReply", reply.id)
+                
+    db.session.commit()
+    log_action("report_resolved", "ContentReport", report_id, {"action": action})
+    flash("Đã xử lý báo cáo thành công.", "success")
+    return redirect(url_for("admin.list_reports", status=request.args.get("status", "pending")))
